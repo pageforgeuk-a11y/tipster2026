@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Season table{% endblock %}
+{% block content %}
+<h1>Season table</h1>
+<p class="muted">{{ season.name }} — ranked by cumulative total; ties broken by cumulative Section 1.</p>
+
+<div class="card">
+  <table class="lb">
+    <thead>
+      <tr><th class="rank">#</th><th>Team</th><th class="num">S1 (cum)</th><th class="num">Total</th></tr>
+    </thead>
+    <tbody>
+      {% for row in board %}
+        <tr class="{% if row.participant.id == me.id %}me{% endif %}">
+          <td class="rank">{{ row.rank }}</td>
+          <td>{{ row.participant.display_name }}</td>
+          <td class="num">{{ row.score.s1_total }}</td>
+          <td class="num"><b>{{ row.score.total }}</b></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="muted">No scores yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="btn-row"><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a></div>
+{% endblock %}

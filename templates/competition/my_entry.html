@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}My GW{{ game_week.week_number }} entry{% endblock %}
+{% block content %}
+<h1>My GW{{ game_week.week_number }} entry</h1>
+
+{% if weekly_score %}
+<div class="card">
+  <h2 style="margin-top:0;">Your score this week: {{ weekly_score.total }}</h2>
+  {% if weekly_score.is_non_entry_default %}
+    <p class="muted">You didn't submit — assigned the week's lowest score.</p>
+  {% else %}
+    <div class="section-score">
+      <span>S1 <b>{{ weekly_score.s1 }}</b></span>
+      <span>S2 <b>{{ weekly_score.s2 }}</b></span>
+      <span>S3 <b>{{ weekly_score.s3 }}</b></span>
+      <span>S4 <b>{{ weekly_score.s4 }}</b></span>
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if not entry %}
+  <div class="card"><p class="muted">You didn't submit an entry for this week.</p></div>
+{% else %}
+  <h2>Match predictions</h2>
+  <div class="card">
+    {% for mp in entry.match_predictions.all %}
+      <div class="fixture">
+        <span class="team home">{{ mp.fixture.home_team }}</span>
+        <span class="score-pair">
+          <b>{{ mp.pred_home|default:"–" }}</b><span class="muted">–</span><b>{{ mp.pred_away|default:"–" }}</b>
+          {% if mp.fixture.has_result %}
+            <span class="muted">(was {{ mp.fixture.actual_home_score }}–{{ mp.fixture.actual_away_score }})</span>
+          {% endif %}
+        </span>
+        <span class="team away">{{ mp.fixture.away_team }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <h2>Total goals</h2>
+  <div class="card"><p>You predicted <b>{{ entry.total_goals_prediction.predicted_total|default:"–" }}</b></p></div>
+
+  <h2>True / False</h2>
+  <div class="card">
+    {% for a in entry.tf_answers.all %}
+      <div class="tf-row">
+        <span>{{ a.question.order }}. {{ a.question.text }}</span>
+        <span>
+          <b>{% if a.answer is True %}True{% elif a.answer is False %}False{% else %}–{% endif %}</b>
+          {% if a.question.correct_answer is not None %}
+            <span class="muted">(ans: {% if a.question.correct_answer %}True{% else %}False{% endif %})</span>
+          {% endif %}
+        </span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <h2>Scorer picks</h2>
+  <div class="card">
+    {% for p in entry.scorer_picks.all %}
+      <div class="tf-row">
+        <span>Pick {{ p.position }}</span>
+        <b>{% if p.player %}{{ p.player.label }}{% else %}{{ p.player_name|default:"–" }}{% endif %}</b>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div class="btn-row"><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a></div>
+{% endblock %}

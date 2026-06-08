@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}GW{{ game_week.week_number }} table{% endblock %}
+{% block content %}
+<h1>GW{{ game_week.week_number }} table</h1>
+<p class="muted">Ranked by weekly total; ties broken by Section 1.</p>
+
+{% if game_week.status != 'finalised' %}
+  <div class="card"><p class="muted">This week isn't finalised yet — scores may change.</p></div>
+{% endif %}
+
+<div class="card">
+  <table class="lb">
+    <thead>
+      <tr>
+        <th class="rank">#</th><th>Team</th>
+        <th class="num">S1</th><th class="num">S2</th><th class="num">S3</th><th class="num">S4</th>
+        <th class="num">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in board %}
+        <tr class="{% if row.participant.id == me.id %}me{% endif %}">
+          <td class="rank">{{ row.rank }}</td>
+          <td>{{ row.participant.display_name }}{% if row.score.is_non_entry_default %} <span class="muted">(no entry)</span>{% endif %}</td>
+          <td class="num">{{ row.score.s1 }}</td>
+          <td class="num">{{ row.score.s2 }}</td>
+          <td class="num">{{ row.score.s3 }}</td>
+          <td class="num">{{ row.score.s4 }}</td>
+          <td class="num"><b>{{ row.score.total }}</b></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="muted">No scores yet — finalise the week to populate the table.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="btn-row">
+  <a class="btn btn-secondary" href="{% url 'season_leaderboard' %}">Season table</a>
+  <a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a>
+</div>
+{% endblock %}

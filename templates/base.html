@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#006492">
+  <title>{% block title %}K.H.S.S.C. Tipsters{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'dashboard' %}">K.H.S.S.C. Tipsters</a>
+    <nav class="nav">
+      {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}">Home</a>
+        <a href="{% url 'season_leaderboard' %}">Table</a>
+        {% if user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
+        <form method="post" action="{% url 'logout' %}" class="logout-form">
+          {% csrf_token %}<button type="submit" class="linkbtn">Log out</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}">Log in</a>
+        <a href="{% url 'register' %}">Register</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="container">
+    {% if messages %}
+      <div class="messages">
+        {% for message in messages %}
+          <div class="msg msg-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <small>{% if active_season %}{{ active_season.name }}{% endif %}</small>
+  </footer>
+</body>
+</html>

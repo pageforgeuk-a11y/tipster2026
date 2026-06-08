@@ -1,0 +1,12 @@
+{% extends "admin/change_form.html" %}
+{% comment %}
+Adds a shared <datalist> of known team names so the fixture inline's free-text
+home/away inputs (which reference list="{{ team_datalist_id }}") offer
+autocomplete. Free text is still allowed — this only suggests.
+{% endcomment %}
+{% block content %}
+{{ block.super }}
+<datalist id="{{ team_datalist_id }}">
+  {% for name in team_suggestions %}<option value="{{ name }}"></option>{% endfor %}
+</datalist>
+{% endblock %}

@@ -1,0 +1,309 @@
+/* =========================================================================
+   K.H.S.S.C. Tipsters — "Vibrant Matchday" system (light, mobile-first)
+   Translated from DESIGN.md. Glass is used selectively (header + hero card);
+   data surfaces stay solid white for readability and performance on phones.
+   Solid/text-bearing actions use the deep primary (#006492) for contrast;
+   sky blue (#00b2ff) is reserved for accents, gradients, borders and glows.
+   ========================================================================= */
+
+:root {
+  /* Palette */
+  --surface: #f7f9fb;
+  --surface-low: #f2f4f6;
+  --surface-container: #eceef0;
+  --on-surface: #191c1e;
+  --on-surface-variant: #3e4851;
+  --outline: #6e7882;
+  --outline-variant: #bdc8d2;
+  --border: #e2e8f0;
+
+  --primary: #006492;          /* deep sky — solid buttons, links, headings */
+  --primary-bright: #00b2ff;   /* sky blue — accents, gradients, glows */
+  --primary-dark: #004b6f;
+  --on-primary: #ffffff;
+  --primary-tint: color-mix(in srgb, var(--primary-bright) 12%, #ffffff);
+  --primary-ink: #004161;
+
+  --secondary: #b70b3d;        /* coral punch — urgency, live, alerts */
+  --secondary-bright: #da2f54;
+  --secondary-tint: color-mix(in srgb, var(--secondary-bright) 12%, #ffffff);
+
+  --tertiary: #7212ff;         /* violet — decorative gradients */
+  --tertiary-tint: color-mix(in srgb, var(--tertiary) 12%, #ffffff);
+
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --success: #1c7d4d;
+  --success-tint: #e3f6ec;
+
+  --input-bg: #f1f5f9;
+
+  /* Radii */
+  --r-sm: 0.5rem;
+  --r-md: 0.75rem;
+  --r-lg: 1rem;
+  --r-xl: 1.5rem;
+  --r-full: 9999px;
+
+  /* Elevation (soft, high-diffusion) */
+  --shadow-1: 0 1px 2px rgba(16, 42, 67, 0.04), 0 8px 24px rgba(16, 42, 67, 0.06);
+  --shadow-glass: 0 8px 32px rgba(0, 75, 111, 0.10);
+  --glow-primary: 0 6px 20px rgba(0, 178, 255, 0.35);
+
+  --font-head: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --container: 760px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--on-surface);
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(0, 178, 255, 0.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 0%, rgba(114, 18, 255, 0.07), transparent 55%),
+    var(--surface);
+  background-attachment: fixed;
+  min-height: 100vh;
+  overflow-x: hidden; /* safety net against incidental horizontal overflow */
+}
+
+a { color: var(--primary); text-decoration: none; font-weight: 600; }
+a:hover { color: var(--primary-dark); }
+
+h1, h2, h3 { font-family: var(--font-head); letter-spacing: -0.01em; color: var(--on-surface); }
+h1 { font-size: 1.75rem; font-weight: 800; margin: .2rem 0 1rem; }
+h2 { font-size: 1.2rem; font-weight: 700; margin: 1.5rem 0 .7rem; }
+.muted { color: var(--on-surface-variant); }
+
+/* --- Top bar (glass) ----------------------------------------------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: .5rem; padding: .75rem 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow-glass);
+}
+.topbar::before {
+  /* inner glow stroke on the top edge */
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent);
+}
+.brand {
+  font-family: var(--font-head); font-weight: 800; font-size: .92rem;
+  color: var(--on-surface); letter-spacing: -0.02em; white-space: nowrap;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;
+}
+.brand::before {
+  content: "⚽"; margin-right: .35rem;
+}
+.nav { display: flex; align-items: center; gap: .7rem; font-size: .82rem; flex: 0 0 auto; }
+.nav a { color: var(--on-surface-variant); }
+.nav a:hover { color: var(--primary); }
+.logout-form { margin: 0; }
+.linkbtn {
+  background: none; border: 0; color: var(--on-surface-variant);
+  cursor: pointer; font: inherit; font-weight: 600; padding: 0;
+}
+.linkbtn:hover { color: var(--primary); }
+
+.container { max-width: var(--container); margin: 0 auto; padding: 1.25rem 1rem 0; }
+.footer { text-align: center; color: var(--on-surface-variant); padding: 2.5rem 1rem; font-size: .85rem; }
+
+/* --- Cards (solid Level-1) ---------------------------------------------- */
+.card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.1rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-1);
+}
+
+/* Hero / deadline card — the one place we lean into glass + colour. */
+.hero {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--r-xl);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  color: #fff;
+  background:
+    linear-gradient(135deg, rgba(0, 178, 255, 0.95), rgba(0, 100, 146, 0.95) 60%, rgba(114, 18, 255, 0.92));
+  box-shadow: var(--shadow-glass);
+  overflow: hidden;
+}
+.hero::after {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
+}
+.hero h2 { color: #fff; margin: 0; }
+.hero .muted { color: rgba(255,255,255,.85); }
+.hero a.btn-secondary { background: rgba(255,255,255,.16); color:#fff; border-color: rgba(255,255,255,.4); }
+.hero a.btn-secondary:hover { background: rgba(255,255,255,.26); }
+/* Primary CTA pops white against the coloured hero. */
+.hero .btn:not(.btn-secondary) { background: #fff; color: var(--primary); box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.hero .btn:not(.btn-secondary):hover { background: #fff; filter: none; color: var(--primary-dark); }
+.hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
+
+/* Deadline countdown chip (coral, urgency). */
+.countdown {
+  display: inline-block; background: var(--secondary-tint); color: var(--secondary);
+  font-weight: 700; padding: .2rem .65rem; border-radius: var(--r-full); font-size: .85rem;
+}
+
+/* --- Messages ------------------------------------------------------------ */
+.messages { margin-bottom: 1rem; }
+.msg { padding: .7rem .9rem; border-radius: var(--r-md); margin-bottom: .5rem; font-weight: 500; border: 1px solid transparent; }
+.msg-success { background: var(--success-tint); color: var(--success); border-color: #b6e6cb; }
+.msg-error { background: var(--error-container); color: var(--on-error-container); border-color: #ffc4bd; }
+.msg-warning { background: #fff4d6; color: #7a5600; border-color: #ffe39c; }
+
+/* --- Buttons ------------------------------------------------------------- */
+.btn {
+  display: inline-block; width: 100%;
+  font-family: var(--font-head); font-weight: 700; font-size: 1rem;
+  padding: .85rem 1.2rem; border: 0; border-radius: var(--r-full);
+  color: var(--on-primary); cursor: pointer; text-align: center;
+  background: linear-gradient(180deg, #0a82bf, var(--primary));
+  box-shadow: var(--glow-primary);
+  transition: transform .06s ease, box-shadow .2s ease, filter .2s ease;
+}
+.btn:hover { filter: brightness(1.06); color: #fff; box-shadow: 0 8px 26px rgba(0, 178, 255, .45); }
+.btn:active { transform: translateY(1px); }
+.btn-secondary {
+  background: #fff; color: var(--primary); border: 1px solid var(--outline-variant);
+  box-shadow: none;
+}
+.btn-secondary:hover { background: var(--surface-low); filter: none; color: var(--primary-dark); }
+.btn-row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+.btn-row .btn { width: auto; flex: 1 1 9rem; }
+
+/* --- Pills / chips ------------------------------------------------------- */
+.pill {
+  display: inline-block; padding: .25rem .7rem; border-radius: var(--r-full);
+  font-family: var(--font-body); font-size: .72rem; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.pill-open { background: var(--primary-tint); color: var(--primary-ink); }
+.pill-locked { background: var(--secondary-tint); color: var(--secondary); }
+.pill-results_in { background: #fff4d6; color: #7a5600; }
+.pill-draft { background: var(--surface-container); color: var(--on-surface-variant); }
+.pill-finalised { background: var(--tertiary-tint); color: #4b00b0; }
+/* "Live"/urgent variant with a gentle pulse. */
+.pill-live { background: var(--secondary); color: #fff; }
+.pill-live::before {
+  content: ""; display: inline-block; width: .5rem; height: .5rem; margin-right: .35rem;
+  border-radius: 50%; background: #fff; vertical-align: middle;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+
+/* --- Fixtures / entry rows ---------------------------------------------- */
+.fixture {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: .6rem; padding: .7rem 0; border-bottom: 1px solid var(--border);
+}
+.fixture:last-child { border-bottom: 0; }
+/* min-width:0 lets long team names wrap instead of forcing grid overflow. */
+.fixture .team { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.fixture .home { text-align: right; }
+.fixture .away { text-align: left; }
+.score-pair { display: flex; align-items: center; gap: .4rem; justify-content: center; }
+
+/* --- Inputs -------------------------------------------------------------- */
+.score-input, .scorer-input, .text-input,
+.field input[type=text], .field input[type=password], .field input[type=email],
+.field input[type=number], .field input:not([type]) {
+  font-family: var(--font-body); font-size: 1rem; color: var(--on-surface);
+  background: var(--input-bg); border: 2px solid transparent; border-radius: var(--r-sm);
+  padding: .6rem; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.score-input {
+  width: 3.1rem; text-align: center; font-family: var(--font-head);
+  font-weight: 700; font-size: 1.15rem; padding: .5rem;
+}
+.scorer-input, .text-input, .field input { width: 100%; }
+.score-input:focus, .scorer-input:focus, .text-input:focus, .field input:focus {
+  outline: none; background: #fff;
+  border-color: var(--primary-bright);
+  box-shadow: 0 0 0 4px rgba(0, 178, 255, .15);
+}
+.field { margin-bottom: 1rem; }
+.field label { display: block; margin-bottom: .35rem; font-weight: 600; font-size: .92rem; }
+.field .helptext, .helptext { color: var(--on-surface-variant); font-size: .82rem; display: block; margin-top: .25rem; }
+.errorlist { color: var(--error); list-style: none; padding: 0; margin: .25rem 0; font-size: .85rem; font-weight: 600; }
+
+/* --- True/False segmented control --------------------------------------- */
+.tf-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: .7rem 0; border-bottom: 1px solid var(--border);
+}
+.tf-row:last-child { border-bottom: 0; }
+.tf-row > span:first-child { min-width: 0; }
+.tf-options { display: flex; gap: .4rem; flex: 0 0 auto; }
+.tf-options label {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .45rem .8rem; border: 1.5px solid var(--outline-variant); border-radius: var(--r-full);
+  cursor: pointer; font-size: .85rem; font-weight: 600; background: #fff;
+  color: var(--on-surface-variant); user-select: none;
+  transition: all .12s ease;
+}
+.tf-options label:has(input:checked) {
+  background: var(--primary); border-color: var(--primary); color: #fff;
+  box-shadow: var(--glow-primary);
+}
+.tf-options input { accent-color: var(--primary); margin: 0; }
+.tf-options label:has(input:checked) input { position: absolute; opacity: 0; }
+
+/* --- Tables -------------------------------------------------------------- */
+/* If a wide table can't fit a phone, let its card scroll rather than clip. */
+.card:has(> table.lb) { overflow-x: auto; }
+table.lb { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+table.lb th, table.lb td { padding: .65rem .45rem; text-align: left; border-bottom: 1px solid var(--border); }
+table.lb thead th {
+  color: var(--on-surface-variant); font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; border-bottom: 2px solid var(--border);
+}
+table.lb tbody tr:nth-child(even) { background: var(--surface-low); }
+table.lb td.num, table.lb th.num { text-align: right; }
+table.lb tbody td b { font-family: var(--font-head); }
+tr.me { background: var(--primary-tint) !important; box-shadow: inset 3px 0 0 var(--primary); }
+.rank {
+  width: 2.4rem; font-family: var(--font-head); font-weight: 700;
+  color: var(--on-surface-variant);
+}
+tr.me .rank { color: var(--primary); }
+
+/* --- Week list ----------------------------------------------------------- */
+.week-list { list-style: none; padding: 0; margin: 0; }
+.week-list li {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: .75rem; padding: .8rem 0; border-bottom: 1px solid var(--border);
+}
+.week-list li:last-child { border-bottom: 0; }
+.week-list .wk-actions { display: flex; gap: .9rem; font-size: .9rem; white-space: nowrap; }
+
+/* --- Section subtotals --------------------------------------------------- */
+.section-score { display: flex; gap: .9rem; flex-wrap: wrap; color: var(--on-surface-variant); font-size: .92rem; }
+.section-score span {
+  background: var(--surface-low); padding: .3rem .7rem; border-radius: var(--r-full);
+}
+.section-score b { color: var(--primary); font-family: var(--font-head); }
+.deadline-note { color: #fff; font-weight: 700; }
+
+/* --- Desktop ------------------------------------------------------------- */
+@media (min-width: 768px) {
+  .container { padding: 2rem 2.5rem 0; }
+  h1 { font-size: 2.1rem; }
+}

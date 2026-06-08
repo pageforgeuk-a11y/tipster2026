@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}GW{{ game_week.week_number }} predictions{% endblock %}
+{% block content %}
+<h1>GW{{ game_week.week_number }} predictions</h1>
+<p class="muted">
+  Deadline: {{ game_week.deadline|date:"D j M Y, H:i" }} (UK)
+  {% if editable %}
+    — <span class="countdown" id="countdown" data-deadline="{{ game_week.deadline|date:'c' }}"></span>
+  {% else %}
+    — <span class="pill pill-locked">Locked</span>
+  {% endif %}
+</p>
+
+{% if not editable %}
+  <div class="card"><p>This entry is locked. <a href="{% url 'my_entry' game_week.week_number %}">View your entry</a>.</p></div>
+{% else %}
+<form method="post">
+  {% csrf_token %}
+
+  <h2>1 · Match results &amp; scores</h2>
+  <div class="card">
+    {% for fixture, home_field, away_field in form.fixture_rows %}
+      <div class="fixture">
+        <span class="team home">{{ fixture.home_team }}</span>
+        <span class="score-pair">
+          {{ home_field }} <span class="muted">–</span> {{ away_field }}
+        </span>
+        <span class="team away">{{ fixture.away_team }}</span>
+      </div>
+      {% if home_field.errors or away_field.errors %}
+        <ul class="errorlist">{{ home_field.errors }}{{ away_field.errors }}</ul>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <h2>2 · Total goals (all 10 matches)</h2>
+  <div class="card">
+    <div class="field">
+      <label for="{{ form.total_goals.id_for_label }}">Your predicted total goals</label>
+      {{ form.total_goals }}
+      {{ form.total_goals.errors }}
+    </div>
+  </div>
+
+  <h2>3 · True or False</h2>
+  <div class="card">
+    {% for question, field in form.question_rows %}
+      <div class="tf-row">
+        <span>{{ question.order }}. {{ question.text }}</span>
+        <span class="tf-options">
+          {% for radio in field %}{{ radio }}{% endfor %}
+        </span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <h2>4 · Predict the scorers{% if game_week.is_international %} <span class="pill pill-finalised">International week</span>{% endif %}</h2>
+  <div class="card">
+    <p class="muted">Ranked 1 (4 pts) to 4 (1 pt). +1 for each extra goal that player scores.</p>
+    <p class="muted">Pick from the suggestions to avoid mix-ups (e.g. two players called “Smith”). You can still type any name.</p>
+    {% for position, field in form.scorer_rows %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">Pick {{ position }}</label>
+        {{ field }}
+      </div>
+    {% endfor %}
+    <datalist id="player-suggestions">
+      {% for label in player_suggestions %}<option value="{{ label }}"></option>{% endfor %}
+    </datalist>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" type="submit">Save predictions</button>
+    <a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a>
+  </div>
+  <p class="muted" style="margin-top:.6rem;">You can edit freely until the deadline. Blank fields score 0.</p>
+</form>
+
+<script>
+  (function () {
+    var el = document.getElementById('countdown');
+    if (!el) return;
+    var deadline = new Date(el.dataset.deadline).getTime();
+    function tick() {
+      var diff = deadline - Date.now();
+      if (diff <= 0) { el.textContent = 'deadline passed — refresh'; return; }
+      var d = Math.floor(diff / 86400000);
+      var h = Math.floor(diff % 86400000 / 3600000);
+      var m = Math.floor(diff % 3600000 / 60000);
+      el.textContent = (d ? d + 'd ' : '') + h + 'h ' + m + 'm left';
+    }
+    tick();
+    setInterval(tick, 30000);
+  })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Home — K.H.S.S.C. Tipsters{% endblock %}
+{% block content %}
+<h1>Hi {{ user.first_name|default:participant.display_name }}</h1>
+<p class="muted" style="margin-top:-.5rem;">Team: <b>{{ participant.display_name }}</b></p>
+
+{% if open_week %}
+<div class="hero">
+  <div class="hero-head">
+    <div>
+      <h2>Game Week {{ open_week.week_number }}{% if open_week.title %} — {{ open_week.title }}{% endif %}</h2>
+      <p class="muted" style="margin:.3rem 0 0;">Deadline: {{ open_week.deadline|date:"D j M, H:i" }} (UK)</p>
+    </div>
+    <span class="pill pill-open">Open</span>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{% url 'entry' open_week.week_number %}">
+      {% if open_week.my_entry %}Edit my entry{% else %}Make my predictions{% endif %}
+    </a>
+    <a class="btn btn-secondary" href="{% url 'weekly_leaderboard' open_week.week_number %}">Weekly table</a>
+  </div>
+</div>
+{% else %}
+<div class="card"><p class="muted">No game week is open right now. The next one will appear here.</p></div>
+{% endif %}
+
+<h2>All game weeks</h2>
+<div class="card">
+  <ul class="week-list">
+    {% for w in weeks %}
+      <li>
+        <div>
+          <b>GW{{ w.week_number }}</b>
+          {% if w.title %}<span class="muted"> — {{ w.title }}</span>{% endif %}
+          <span class="pill pill-{{ w.status }}">{{ w.get_status_display }}</span>
+        </div>
+        <div class="wk-actions">
+          {% if w.status == 'open' and not w.is_past_deadline %}
+            <a href="{% url 'entry' w.week_number %}">Enter</a>
+          {% elif w.my_entry %}
+            <a href="{% url 'my_entry' w.week_number %}">My entry</a>
+          {% endif %}
+          {% if w.status == 'finalised' %}
+            <a href="{% url 'weekly_leaderboard' w.week_number %}">Table</a>
+          {% endif %}
+        </div>
+      </li>
+    {% empty %}
+      <li><span class="muted">No game weeks have been created yet.</span></li>
+    {% endfor %}
+  </ul>
+</div>
+
+<p class="muted" style="text-align:center;"><a href="{% url 'password_change' %}">Change password</a></p>
+{% endblock %}
