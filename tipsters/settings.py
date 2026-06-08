@@ -214,8 +214,12 @@ APIFOOTBALL_BASE_URL = os.environ.get(
 
 # --- Reminders ---------------------------------------------------------------
 # Hours-before-deadline windows at which to send a reminder to non-submitters.
+# Default is a single 24h window, which suits Vercel's Hobby plan (cron runs once
+# per day): every deadline gets exactly one reminder run in the 24h before it.
+# With finer scheduling (Vercel Pro, or an external hourly trigger) you can set
+# multiple windows, e.g. "24,3", to also remind closer to the deadline.
 REMINDER_WINDOWS_HOURS = [
-    int(h) for h in os.environ.get("REMINDER_WINDOWS_HOURS", "24,3").split(",") if h
+    int(h) for h in os.environ.get("REMINDER_WINDOWS_HOURS", "24").split(",") if h
 ]
 # Shared secret so only Vercel Cron can hit the reminder endpoint.
 CRON_SECRET = os.environ.get("CRON_SECRET", "")

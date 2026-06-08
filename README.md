@@ -121,8 +121,17 @@ The repo includes `vercel.json` (serverless function + static build + cron) and
    Then in the admin: create a Season (tick *is active*), then game weeks.
 
 5. **Deploy.** `vercel --prod` (or connect the Git repo in the Vercel dashboard).
-   The `crons` entry in `vercel.json` calls `/cron/send-reminders/` hourly; Vercel
-   sends `Authorization: Bearer $CRON_SECRET`, which the endpoint verifies.
+   The `crons` entry in `vercel.json` calls `/cron/send-reminders/` **once a day**
+   (08:00 UTC); Vercel sends `Authorization: Bearer $CRON_SECRET`, which the
+   endpoint verifies.
+
+   > **Vercel Hobby plan limits cron to once per day**, so the schedule is daily
+   > and `REMINDER_WINDOWS_HOURS` defaults to `24` — every deadline gets exactly
+   > one reminder in the 24h before it. To remind players closer to the deadline
+   > too (e.g. 3h before), either upgrade to Vercel Pro and change the schedule to
+   > `0 * * * *`, or trigger `/cron/send-reminders/` hourly from a free external
+   > scheduler (e.g. cron-job.org / GitHub Actions) sending the same Bearer token,
+   > and set `REMINDER_WINDOWS_HOURS=24,3`.
 
 > Re-run `python manage.py migrate` against the production DB whenever you deploy
 > a change that includes a new migration.
