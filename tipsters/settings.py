@@ -32,19 +32,26 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = env_bool("DEBUG", True)
 
-# Vercel sets VERCEL_URL to the deployment host. Always allow it plus anything
-# the operator lists explicitly.
+# Hosts. Allow anything the operator lists, plus Vercel's per-deployment and
+# production URLs. On Vercel we also allow the *.vercel.app alias wildcard so the
+# production alias (which differs from VERCEL_URL) isn't rejected with a 400.
 ALLOWED_HOSTS = [h for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h]
-if os.environ.get("VERCEL_URL"):
-    ALLOWED_HOSTS.append(os.environ["VERCEL_URL"])
+for _var in ("VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_BRANCH_URL"):
+    if os.environ.get(_var):
+        ALLOWED_HOSTS.append(os.environ[_var])
+if os.environ.get("VERCEL"):
+    ALLOWED_HOSTS.append(".vercel.app")
 if DEBUG and not ALLOWED_HOSTS:
     ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".localhost"]
 
 CSRF_TRUSTED_ORIGINS = [
     o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o
 ]
-if os.environ.get("VERCEL_URL"):
-    CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ['VERCEL_URL']}")
+for _var in ("VERCEL_URL", "VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_BRANCH_URL"):
+    if os.environ.get(_var):
+        CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ[_var]}")
+if os.environ.get("VERCEL"):
+    CSRF_TRUSTED_ORIGINS.append("https://*.vercel.app")
 
 
 # --- Applications ------------------------------------------------------------
