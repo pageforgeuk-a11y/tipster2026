@@ -109,10 +109,21 @@ WSGI_APPLICATION = "tipsters.wsgi.application"
 #   * Disable server-side prepared statements -> transaction poolers reject them.
 #   * Disable server-side cursors -> not supported in transaction pooling mode.
 
-if os.environ.get("DATABASE_URL"):
+# Accept the pooled connection string under any of the common names the Neon /
+# Vercel integration may use (depends on the chosen prefix). Prefer pooled.
+_db_url = next(
+    (
+        os.environ[name]
+        for name in ("DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL")
+        if os.environ.get(name)
+    ),
+    "",
+)
+
+if _db_url:
     DATABASES = {
-        "default": dj_database_url.config(
-            env="DATABASE_URL",
+        "default": dj_database_url.parse(
+            _db_url,
             conn_max_age=0,
             ssl_require=env_bool("DB_SSL_REQUIRE", True),
         )
