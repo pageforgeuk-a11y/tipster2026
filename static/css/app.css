@@ -233,9 +233,13 @@ h2 { font-size: 1.2rem; font-weight: 700; margin: 1.5rem 0 .7rem; }
   padding: .6rem; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
 .score-input {
-  width: 3.1rem; text-align: center; font-family: var(--font-head);
-  font-weight: 700; font-size: 1.15rem; padding: .5rem;
+  width: 3.4rem; text-align: center; font-family: var(--font-head);
+  font-weight: 700; font-size: 1.1rem; padding: .5rem .35rem;
 }
+/* Hide the native number spinner so two digits aren't clipped. */
+.score-input::-webkit-outer-spin-button,
+.score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.score-input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .scorer-input, .text-input, .field input { width: 100%; }
 .score-input:focus, .scorer-input:focus, .text-input:focus, .field input:focus {
   outline: none; background: #fff;
