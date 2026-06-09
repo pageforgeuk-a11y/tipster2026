@@ -193,7 +193,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "auto")  # auto | resend | console | smtp
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", "K.H.S.S.C. Tipsters <tipsters@example.com>"
+    "DEFAULT_FROM_EMAIL", "K.H.S.S.C. Tipsters <tipsters@pageforge.co.uk>"
 )
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
