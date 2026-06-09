@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}New game week{% endblock %}
+{% block content %}
+<h1>New game week</h1>
+<p class="muted">{{ season.name }} — set the basics, then you'll add fixtures and questions.</p>
+
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    {% for field in form %}
+      {% if field.name != 'is_international' %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {{ field.errors }}
+        </div>
+      {% endif %}
+    {% endfor %}
+    <div class="field">
+      <label class="check-label">{{ form.is_international }} <span>International week (scorer labels show national teams)</span></label>
+      {{ form.is_international.errors }}
+    </div>
+    <div class="btn-row">
+      <button class="btn" type="submit">Create &amp; add fixtures</button>
+      <a class="btn btn-secondary" href="{% url 'manage:dashboard' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -18,7 +18,10 @@
   </div>
 </div>
 
-<h2>Game weeks</h2>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+  <h2 style="margin:0;">Game weeks</h2>
+  <a class="btn" href="{% url 'manage:week_new' %}" style="width:auto;padding:.5rem 1rem;">+ New week</a>
+</div>
 {% for w in weeks %}
   <div class="card" {% if w.needs_attention %}style="border-color:var(--secondary-bright);"{% endif %}>
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
@@ -36,7 +39,7 @@
     </div>
 
     <div class="btn-row" style="margin-top:.7rem;">
-      <a class="btn btn-secondary" href="/admin/competition/gameweek/{{ w.id }}/change/">Set up</a>
+      <a class="btn btn-secondary" href="{% url 'manage:week_setup' w.id %}">Set up</a>
 
       {% if w.status == 'draft' %}
         <form method="post" action="{% url 'manage:week_action' w.id %}" style="flex:1 1 8rem;margin:0;">
@@ -61,8 +64,7 @@
     </div>
   </div>
 {% empty %}
-  <div class="card"><p class="muted">No game weeks yet. Add them in the
-    <a href="/admin/competition/gameweek/add/">Django admin</a> (Phase B will bring this on-site).</p></div>
+  <div class="card"><p class="muted">No game weeks yet. <a href="{% url 'manage:week_new' %}">Create the first one →</a></p></div>
 {% endfor %}
 {% endif %}
 {% endblock %}

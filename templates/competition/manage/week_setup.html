@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Set up GW{{ game_week.week_number }}{% endblock %}
+{% block content %}
+<h1>Set up GW{{ game_week.week_number }}</h1>
+
+<form method="post">
+  {% csrf_token %}
+
+  <h2>Details</h2>
+  <div class="card">
+    {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    {% for field in form %}
+      {% if field.name != 'is_international' %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {{ field.errors }}
+        </div>
+      {% endif %}
+    {% endfor %}
+    <div class="field">
+      <label class="check-label">{{ form.is_international }} <span>International week (scorer labels show national teams)</span></label>
+    </div>
+  </div>
+
+  <h2>Fixtures</h2>
+  <div class="card">
+    <p class="muted">Up to 10. Start typing for team suggestions; any name is allowed. Kickoff &amp; match id are optional.</p>
+    {% for row in fixture_rows %}
+      <div class="setup-fixture">
+        <span class="ord">{{ row.order }}</span>
+        <input type="text" name="fix_{{ row.order }}_home" value="{% if row.f %}{{ row.f.home_team }}{% endif %}" list="team-suggestions" autocomplete="off" placeholder="Home" class="minput home">
+        <span class="muted">v</span>
+        <input type="text" name="fix_{{ row.order }}_away" value="{% if row.f %}{{ row.f.away_team }}{% endif %}" list="team-suggestions" autocomplete="off" placeholder="Away" class="minput away">
+        <input type="datetime-local" name="fix_{{ row.order }}_kickoff" value="{{ row.kickoff_val }}" class="minput kick" title="Kickoff (optional)">
+        <input type="text" name="fix_{{ row.order }}_ext" value="{% if row.f %}{{ row.f.external_match_id }}{% endif %}" placeholder="feed id" class="minput ext" title="External match id (optional)">
+      </div>
+    {% endfor %}
+  </div>
+
+  <h2>True / False questions</h2>
+  <div class="card">
+    <p class="muted">Up to 8. Past questions appear as suggestions; type anything new.</p>
+    {% for row in question_rows %}
+      <div class="setup-q">
+        <span class="ord">{{ row.order }}</span>
+        <input type="text" name="q_{{ row.order }}" value="{% if row.q %}{{ row.q.text }}{% endif %}" list="question-suggestions" autocomplete="off" placeholder="Question {{ row.order }}" class="minput qtext">
+      </div>
+    {% endfor %}
+  </div>
+
+  <datalist id="team-suggestions">
+    {% for name in team_suggestions %}<option value="{{ name }}"></option>{% endfor %}
+  </datalist>
+  <datalist id="question-suggestions">
+    {% for q in question_suggestions %}<option value="{{ q }}"></option>{% endfor %}
+  </datalist>
+
+  <div class="btn-row">
+    <button class="btn" type="submit">Save game week</button>
+    <a class="btn btn-secondary" href="{% url 'manage:dashboard' %}">Back</a>
+  </div>
+</form>
+{% endblock %}

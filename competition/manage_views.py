@@ -12,10 +12,28 @@ from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from django.utils.dateparse import parse_datetime
 
 from . import results_ops, services
-from .models import Entry, GameWeek, Participant, Player, ScorerPick, Season
+from .forms import GameWeekForm
+from .models import (
+    Entry,
+    Fixture,
+    GameWeek,
+    Participant,
+    Player,
+    QuestionTemplate,
+    ScorerPick,
+    Season,
+    Team,
+    TrueFalseQuestion,
+)
 from .providers import get_results_provider
+
+FIXTURE_COUNT = 10
+QUESTION_COUNT = 8
 
 ORGANISER_GROUP = "Organiser"
 
@@ -112,6 +130,127 @@ def week_action(request, gw_id):
             request, f"GW{game_week.week_number} finalised and rescored."
         )
     return redirect("manage:dashboard")
+
+
+@organiser_required
+def week_new(request):
+    season = Season.objects.filter(is_active=True).first()
+    if season is None:
+        messages.error(request, "Create and activate a season before adding weeks.")
+        return redirect("manage:dashboard")
+
+    if request.method == "POST":
+        form = GameWeekForm(request.POST)
+        form.instance.season = season  # set before validation (unique week_number)
+        if form.is_valid():
+            game_week = form.save()
+            messages.success(
+                request,
+                f"GW{game_week.week_number} created — now add fixtures and questions.",
+            )
+            return redirect("manage:week_setup", gw_id=game_week.id)
+    else:
+        last = GameWeek.objects.filter(season=season).order_by("-week_number").first()
+        form = GameWeekForm(
+            initial={"week_number": (last.week_number + 1) if last else 1}
+        )
+
+    return render(
+        request, "competition/manage/week_new.html", {"form": form, "season": season}
+    )
+
+
+def _save_setup(post, game_week):
+    """Persist the 10 fixtures and 8 questions from the setup form.
+
+    A row with both team names (or question text) blank deletes any existing
+    entry at that position; otherwise it's created/updated.
+    """
+    for order in range(1, FIXTURE_COUNT + 1):
+        home = post.get(f"fix_{order}_home", "").strip()
+        away = post.get(f"fix_{order}_away", "").strip()
+        ext = post.get(f"fix_{order}_ext", "").strip()
+        kickoff_raw = post.get(f"fix_{order}_kickoff", "").strip()
+        existing = Fixture.objects.filter(game_week=game_week, order=order).first()
+        if home or away:
+            kickoff = None
+            if kickoff_raw:
+                dt = parse_datetime(kickoff_raw)
+                if dt is not None:
+                    kickoff = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+            Fixture.objects.update_or_create(
+                game_week=game_week,
+                order=order,
+                defaults={
+                    "home_team": home,
+                    "away_team": away,
+                    "external_match_id": ext,
+                    "kickoff": kickoff,
+                },
+            )
+        elif existing:
+            existing.delete()
+
+    for order in range(1, QUESTION_COUNT + 1):
+        text = post.get(f"q_{order}", "").strip()
+        existing = TrueFalseQuestion.objects.filter(
+            game_week=game_week, order=order
+        ).first()
+        if text:
+            TrueFalseQuestion.objects.update_or_create(
+                game_week=game_week, order=order, defaults={"text": text}
+            )
+        elif existing:
+            existing.delete()
+
+
+@organiser_required
+def week_setup(request, gw_id):
+    game_week = get_object_or_404(GameWeek, pk=gw_id)
+
+    if request.method == "POST":
+        form = GameWeekForm(request.POST, instance=game_week)
+        if form.is_valid():
+            form.save()
+            _save_setup(request.POST, game_week)
+            messages.success(request, f"GW{game_week.week_number} setup saved.")
+            return redirect("manage:dashboard")
+    else:
+        form = GameWeekForm(instance=game_week)
+
+    fixtures = {f.order: f for f in game_week.fixtures.all()}
+    questions = {q.order: q for q in game_week.questions.all()}
+    fixture_rows = []
+    for order in range(1, FIXTURE_COUNT + 1):
+        f = fixtures.get(order)
+        kickoff_val = (
+            timezone.localtime(f.kickoff).strftime("%Y-%m-%dT%H:%M")
+            if f and f.kickoff
+            else ""
+        )
+        fixture_rows.append({"order": order, "f": f, "kickoff_val": kickoff_val})
+    question_rows = [
+        {"order": o, "q": questions.get(o)} for o in range(1, QUESTION_COUNT + 1)
+    ]
+
+    return render(
+        request,
+        "competition/manage/week_setup.html",
+        {
+            "game_week": game_week,
+            "form": form,
+            "fixture_rows": fixture_rows,
+            "question_rows": question_rows,
+            "team_suggestions": list(
+                Team.objects.filter(is_active=True).values_list("name", flat=True)
+            ),
+            "question_suggestions": list(
+                QuestionTemplate.objects.filter(is_active=True).values_list(
+                    "text", flat=True
+                )
+            ),
+        },
+    )
 
 
 @organiser_required

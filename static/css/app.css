@@ -323,6 +323,25 @@ tr.me .rank { color: var(--primary); }
 .scorer-line .score-input { width: 3rem; }
 .pen { font-size: .85rem; color: var(--on-surface-variant); white-space: nowrap; }
 .pen input { accent-color: var(--primary); }
+.check-label {
+  display: flex; gap: .5rem; align-items: center; font-weight: 600;
+}
+.check-label input { accent-color: var(--primary); flex: 0 0 auto; }
+
+/* Game week setup rows */
+.setup-fixture, .setup-q {
+  display: flex; gap: .4rem; align-items: center; flex-wrap: wrap;
+  padding: .5rem 0; border-bottom: 1px solid var(--border);
+}
+.setup-fixture:last-child, .setup-q:last-child { border-bottom: 0; }
+.ord {
+  flex: 0 0 1.4rem; font-family: var(--font-head); font-weight: 700;
+  color: var(--on-surface-variant); text-align: center;
+}
+.setup-fixture .home, .setup-fixture .away { flex: 1 1 7rem; min-width: 0; }
+.setup-fixture .kick { flex: 1 1 9rem; }
+.setup-fixture .ext { flex: 0 1 6rem; }
+.setup-q .qtext { flex: 1 1 14rem; min-width: 0; }
 
 /* --- Desktop ------------------------------------------------------------- */
 @media (min-width: 768px) {

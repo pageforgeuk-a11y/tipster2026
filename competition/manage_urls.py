@@ -8,6 +8,8 @@ app_name = "manage"
 
 urlpatterns = [
     path("", manage_views.dashboard, name="dashboard"),
+    path("week/new/", manage_views.week_new, name="week_new"),
+    path("week/<int:gw_id>/setup/", manage_views.week_setup, name="week_setup"),
     path("week/<int:gw_id>/action/", manage_views.week_action, name="week_action"),
     path("week/<int:gw_id>/results/", manage_views.results, name="results"),
     path("week/<int:gw_id>/reconcile/", manage_views.reconcile, name="reconcile"),

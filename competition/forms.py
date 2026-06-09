@@ -6,6 +6,49 @@ integers server-side.
 """
 
 from django import forms
+from django.utils import timezone
+
+from .models import GameWeek
+
+# datetime-local input/parse format (no seconds).
+DT_LOCAL = "%Y-%m-%dT%H:%M"
+
+
+class GameWeekForm(forms.ModelForm):
+    """Header fields for a game week, used in the Manage setup screen.
+
+    The deadline is entered/shown in UK local time via a native datetime-local
+    input; Django stores it timezone-aware.
+    """
+
+    class Meta:
+        model = GameWeek
+        fields = ["week_number", "title", "date_range_label", "deadline", "is_international"]
+        widgets = {
+            "week_number": forms.NumberInput(attrs={"min": 1, "max": 40, "class": "minput"}),
+            "title": forms.TextInput(attrs={"class": "minput", "placeholder": "e.g. Opening Weekend"}),
+            "date_range_label": forms.TextInput(attrs={"class": "minput", "placeholder": "e.g. Sat–Sun 9–10 Aug"}),
+            "deadline": forms.DateTimeInput(
+                attrs={"type": "datetime-local", "class": "minput"}, format=DT_LOCAL
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["deadline"].input_formats = [DT_LOCAL]
+        self.fields["title"].required = False
+        self.fields["date_range_label"].required = False
+        # Render an existing deadline in local time for the datetime-local input.
+        if self.instance and self.instance.pk and self.instance.deadline:
+            self.initial["deadline"] = timezone.localtime(
+                self.instance.deadline
+            ).strftime(DT_LOCAL)
+
+    def clean_week_number(self):
+        n = self.cleaned_data["week_number"]
+        if not (1 <= n <= 40):
+            raise forms.ValidationError("Week number must be between 1 and 40.")
+        return n
 
 
 class EntryForm(forms.Form):
