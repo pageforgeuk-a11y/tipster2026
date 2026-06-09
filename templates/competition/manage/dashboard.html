@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Manage — K.H.S.S.C. Tipsters{% endblock %}
+{% block content %}
+<h1>Manage</h1>
+
+{% if not season %}
+  <div class="card">
+    <p>No active season yet. Create one (and tick <i>is active</i>) in the
+      <a href="/admin/competition/season/add/">Django admin</a>, then come back.</p>
+  </div>
+{% else %}
+<div class="hero">
+  <div class="hero-head">
+    <div>
+      <h2>{{ season.name }}</h2>
+      <p class="muted" style="margin:.3rem 0 0;">{{ participant_count }} team{{ participant_count|pluralize }} · {{ player_count }} player{{ player_count|pluralize }} in the bank</p>
+    </div>
+  </div>
+</div>
+
+<h2>Game weeks</h2>
+{% for w in weeks %}
+  <div class="card" {% if w.needs_attention %}style="border-color:var(--secondary-bright);"{% endif %}>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+      <div>
+        <b>GW{{ w.week_number }}</b>{% if w.title %} — {{ w.title }}{% endif %}
+        {% if w.needs_attention %} <span class="pill pill-live">action</span>{% endif %}
+        <div class="muted" style="font-size:.85rem;margin-top:.2rem;">
+          Deadline {{ w.deadline|date:"D j M, H:i" }} ·
+          {{ w.fixture_count }}/10 fixtures · {{ w.question_count }}/8 questions ·
+          {{ w.submitted_count }} entr{{ w.submitted_count|pluralize:"y,ies" }}
+          {% if w.unresolved_count %} · <span style="color:var(--secondary);">{{ w.unresolved_count }} to reconcile</span>{% endif %}
+        </div>
+      </div>
+      <span class="pill pill-{{ w.status }}">{{ w.get_status_display }}</span>
+    </div>
+
+    <div class="btn-row" style="margin-top:.7rem;">
+      <a class="btn btn-secondary" href="/admin/competition/gameweek/{{ w.id }}/change/">Set up</a>
+
+      {% if w.status == 'draft' %}
+        <form method="post" action="{% url 'manage:week_action' w.id %}" style="flex:1 1 8rem;margin:0;">
+          {% csrf_token %}<input type="hidden" name="action" value="open">
+          <button class="btn" type="submit">Open to players</button>
+        </form>
+      {% elif w.status == 'open' and not w.is_past_deadline %}
+        <form method="post" action="{% url 'manage:week_action' w.id %}" style="flex:1 1 8rem;margin:0;">
+          {% csrf_token %}<input type="hidden" name="action" value="lock">
+          <button class="btn btn-secondary" type="submit">Lock now</button>
+        </form>
+      {% else %}
+        <a class="btn" href="{% url 'manage:results' w.id %}">Enter results</a>
+        {% if w.unresolved_count %}
+          <a class="btn btn-secondary" href="{% url 'manage:reconcile' w.id %}">Reconcile ({{ w.unresolved_count }})</a>
+        {% endif %}
+      {% endif %}
+
+      {% if w.status == 'finalised' %}
+        <a class="btn btn-secondary" href="{% url 'weekly_leaderboard' w.week_number %}">Table</a>
+      {% endif %}
+    </div>
+  </div>
+{% empty %}
+  <div class="card"><p class="muted">No game weeks yet. Add them in the
+    <a href="/admin/competition/gameweek/add/">Django admin</a> (Phase B will bring this on-site).</p></div>
+{% endfor %}
+{% endif %}
+{% endblock %}

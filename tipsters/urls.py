@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import path, reverse_lazy
+from django.urls import include, path, reverse_lazy
 
 from accounts.forms import EmailLoginForm, ResendPasswordResetForm
 from accounts.views import register
@@ -11,6 +11,8 @@ from competition.cron import send_reminders_endpoint
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Organiser Manage area (on-brand; gated to superuser/Organiser group).
+    path("manage/", include("competition.manage_urls")),
     # Auth (email/password; pluggable for Phase II social logins).
     path("accounts/register/", register, name="register"),
     path(

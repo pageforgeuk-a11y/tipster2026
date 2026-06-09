@@ -38,7 +38,7 @@ class ReconcileCreateTests(TestCase):
         self.client.force_login(User.objects.get(username="admin"))
 
     def _url(self):
-        return reverse("admin:competition_gameweek_reconcile", args=[self.gw.id])
+        return reverse("manage:reconcile", args=[self.gw.id])
 
     def test_create_new_player_inline_and_assign(self):
         self.assertFalse(Player.objects.filter(full_name="Ollie Watkins").exists())

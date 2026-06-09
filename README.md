@@ -62,6 +62,17 @@ The scoring rules in spec §4 are covered in `competition/tests/test_scoring.py`
 (pure rules) and `competition/tests/test_services.py` (recompute, non-entry
 default, aggregation, tie-breaks).
 
+## Organiser "Manage" area
+
+There's an on-brand `/manage/` area for organisers (a status dashboard plus the
+results-entry and reconcile screens), separate from the raw Django admin.
+
+- **Access** = superuser **or** membership of the **"Organiser" group** (created
+  automatically by migration `0005`). Grant access in Django admin → Users → add
+  the user to the *Organiser* group. Organisers get the competition tools without
+  superuser powers; the Django admin remains for the superuser as a fallback.
+- A **"Manage"** link appears in the top nav for anyone with access.
+
 ## The organiser's weekly loop
 
 1. **Admin → Seasons:** create a season, tick *is active*.

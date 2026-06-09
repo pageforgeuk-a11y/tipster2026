@@ -18,6 +18,7 @@
       {% if user.is_authenticated %}
         <a href="{% url 'dashboard' %}">Home</a>
         <a href="{% url 'season_leaderboard' %}">Table</a>
+        {% if is_organiser %}<a href="{% url 'manage:dashboard' %}">Manage</a>{% endif %}
         {% if user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
         <form method="post" action="{% url 'logout' %}" class="logout-form">
           {% csrf_token %}<button type="submit" class="linkbtn">Log out</button>

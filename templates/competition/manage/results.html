@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Results — GW{{ game_week.week_number }}{% endblock %}
+{% block content %}
+<h1>Enter results — GW{{ game_week.week_number }}</h1>
+<p class="muted">Deadline {{ game_week.deadline|date:"D j M, H:i" }} · <span class="pill pill-{{ game_week.status }}">{{ game_week.get_status_display }}</span></p>
+
+{% if unresolved_count %}
+  <div class="msg msg-warning">
+    ⚠ {{ unresolved_count }} scorer pick{{ unresolved_count|pluralize }} couldn't be matched to a player.
+    <a href="{% url 'manage:reconcile' game_week.id %}">Reconcile picks →</a>
+  </div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+
+  {% if provider_configured %}
+    <div class="card">
+      <button class="btn btn-secondary" type="submit" name="action" value="autofill">Auto-fill linked fixtures from {{ provider_name }}</button>
+      <p class="muted" style="margin:.4rem 0 0;">Only fills fixtures with an external match id. Review &amp; override before finalising.</p>
+    </div>
+  {% endif %}
+
+  <h2>Fixtures &amp; goalscorers</h2>
+  {% for fixture in fixtures %}
+    <div class="card">
+      <div class="fixture">
+        <span class="team home">{{ fixture.home_team }}</span>
+        <span class="score-pair">
+          <input class="score-input" type="number" min="0" max="99" name="fixture_{{ fixture.id }}_home" value="{% if fixture.actual_home_score is not None %}{{ fixture.actual_home_score }}{% endif %}">
+          <span class="muted">–</span>
+          <input class="score-input" type="number" min="0" max="99" name="fixture_{{ fixture.id }}_away" value="{% if fixture.actual_away_score is not None %}{{ fixture.actual_away_score }}{% endif %}">
+        </span>
+        <span class="team away">{{ fixture.away_team }}</span>
+      </div>
+      <div class="muted" style="font-size:.8rem;margin:.5rem 0 .3rem;">Goalscorers</div>
+      {% for row in fixture.goal_rows %}
+        <div class="scorer-line">
+          <input type="text" name="scorer_name_{{ fixture.id }}" value="{{ row.goal.player_name }}" list="{{ player_datalist_id }}" autocomplete="off" placeholder="Scorer" class="scorer-input">
+          <select name="scorer_team_{{ fixture.id }}" class="minput">
+            <option value="">— team —</option>
+            {% for t in fixture.team_options %}<option value="{{ t }}" {% if row.selected_team == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+          </select>
+          <input type="number" name="scorer_goals_{{ fixture.id }}" value="{{ row.goal.goals }}" min="1" max="20" class="score-input">
+          <label class="pen"><input type="checkbox" name="scorer_pen_{{ fixture.id }}" value="{{ forloop.counter0 }}" {% if row.goal.is_penalty %}checked{% endif %}> pen</label>
+        </div>
+      {% endfor %}
+      {% for i in "012" %}
+        <div class="scorer-line">
+          <input type="text" name="scorer_name_{{ fixture.id }}" value="" list="{{ player_datalist_id }}" autocomplete="off" placeholder="Add scorer…" class="scorer-input">
+          <select name="scorer_team_{{ fixture.id }}" class="minput">
+            <option value="">— team —</option>
+            {% for t in fixture.team_options %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+          </select>
+          <input type="number" name="scorer_goals_{{ fixture.id }}" value="1" min="1" max="20" class="score-input">
+          <label class="pen"><input type="checkbox" name="scorer_pen_{{ fixture.id }}" value="{{ fixture.goal_rows|length|add:forloop.counter0 }}"> pen</label>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  <h2>True / False answers</h2>
+  <div class="card">
+    {% for q in questions %}
+      <div class="tf-row">
+        <span>{{ q.order }}. {{ q.text }}</span>
+        <select name="tf_{{ q.id }}" class="minput">
+          <option value="" {% if q.correct_answer is None %}selected{% endif %}>—</option>
+          <option value="true" {% if q.correct_answer is True %}selected{% endif %}>True</option>
+          <option value="false" {% if q.correct_answer is False %}selected{% endif %}>False</option>
+        </select>
+      </div>
+    {% endfor %}
+  </div>
+
+  <datalist id="{{ player_datalist_id }}">
+    {% for label in player_suggestions %}<option value="{{ label }}"></option>{% endfor %}
+  </datalist>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" type="submit" name="action" value="save">Save results</button>
+    <button class="btn" type="submit" name="action" value="finalise"
+            onclick="return confirm('Finalise this week? This rescores every entry and applies the non-entry default.');">Finalise &amp; rescore</button>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'manage:dashboard' %}" style="margin-top:.6rem;">Back to dashboard</a>
+</form>
+{% endblock %}

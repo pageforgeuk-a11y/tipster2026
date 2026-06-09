@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Reconcile — GW{{ game_week.week_number }}{% endblock %}
+{% block content %}
+<h1>Reconcile picks — GW{{ game_week.week_number }}</h1>
+<p class="muted">
+  These scorer picks couldn't be matched to a player. For each, pick an existing
+  player, or choose <b>➕ Create new</b> and edit the name (fix spelling /
+  “name - club”) with an optional club. Left on “leave unresolved” they fall back
+  to tolerant name matching.
+</p>
+
+{% if not rows %}
+  <div class="card"><p><b>Nothing to reconcile</b> — every pick is matched. 🎉</p></div>
+  <div class="btn-row"><a class="btn btn-secondary" href="{% url 'manage:results' game_week.id %}">Back to results</a></div>
+{% else %}
+<form method="post">
+  {% csrf_token %}
+  {% for row in rows %}
+    <div class="card">
+      <div style="margin-bottom:.4rem;">
+        <b>{{ row.pick.player_name }}</b>
+        {% if row.pick.needs_review %}<span style="color:var(--secondary);">(ambiguous)</span>{% endif %}
+        <span class="muted">— {{ row.pick.entry.participant.display_name }}, pick {{ row.pick.position }}</span>
+      </div>
+      <div class="scorer-line">
+        <select name="pick_{{ row.pick.id }}" class="minput" style="flex:2 1 12rem;">
+          <option value="">— leave unresolved —</option>
+          <option value="new">➕ Create new player →</option>
+          {% if row.suggestions %}
+            <optgroup label="Likely matches">
+              {% for p in row.suggestions %}<option value="{{ p.id }}">{{ p }}</option>{% endfor %}
+            </optgroup>
+          {% endif %}
+          <optgroup label="All players">
+            {% for p in all_players %}<option value="{{ p.id }}">{{ p }}</option>{% endfor %}
+          </optgroup>
+        </select>
+        <input type="text" name="new_name_{{ row.pick.id }}" value="{{ row.pick.player_name }}" class="scorer-input" placeholder="New player name">
+        <input type="text" name="new_club_{{ row.pick.id }}" class="minput" placeholder="club (optional)">
+      </div>
+    </div>
+  {% endfor %}
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" type="submit">Save mappings</button>
+    <button class="btn" type="submit" name="then" value="finalise"
+            onclick="return confirm('Save mappings, then finalise & rescore the week?');">Save &amp; finalise</button>
+  </div>
+  <a class="btn btn-secondary" href="{% url 'manage:results' game_week.id %}" style="margin-top:.6rem;">Back to results</a>
+</form>
+{% endif %}
+{% endblock %}

@@ -8,8 +8,7 @@ score + goalscorers + T/F + provider auto-fill + override in one place (spec §7
 
 from django import forms
 from django.contrib import admin, messages
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import path, reverse
+from django.urls import reverse
 from django.utils.html import format_html
 
 from . import players as player_resolution
@@ -17,7 +16,6 @@ from . import services
 from .models import (
     Entry,
     Fixture,
-    FixtureGoal,
     GameWeek,
     MatchPrediction,
     Participant,
@@ -31,12 +29,10 @@ from .models import (
     TrueFalseQuestion,
     WeeklyScore,
 )
-from .providers import get_results_provider
 
 # Shared <datalist> ids wired up by GameWeekAdmin's change form (see
 # templates/admin/competition/gameweek/change_form.html).
 TEAM_DATALIST_ID = "team-suggestions"
-PLAYER_DATALIST_ID = "player-suggestions"
 QUESTION_DATALIST_ID = "question-suggestions"
 
 
@@ -164,27 +160,10 @@ class GameWeekAdmin(admin.ModelAdmin):
         extra_context["question_datalist_id"] = QUESTION_DATALIST_ID
         return super()._changeform_view(request, object_id, form_url, extra_context)
 
-    # --- custom URLs ---------------------------------------------------------
-
-    def get_urls(self):
-        urls = super().get_urls()
-        custom = [
-            path(
-                "<int:gw_id>/results/",
-                self.admin_site.admin_view(self.results_entry_view),
-                name="competition_gameweek_results",
-            ),
-            path(
-                "<int:gw_id>/reconcile/",
-                self.admin_site.admin_view(self.reconcile_view),
-                name="competition_gameweek_reconcile",
-            ),
-        ]
-        return custom + urls
-
     @admin.display(description="Results")
     def results_links(self, obj):
-        url = reverse("admin:competition_gameweek_results", args=[obj.id])
+        # Results entry now lives in the on-brand Manage area.
+        url = reverse("manage:results", args=[obj.id])
         return format_html('<a class="button" href="{}">Enter results</a>', url)
 
     # --- status actions ------------------------------------------------------
@@ -207,260 +186,6 @@ class GameWeekAdmin(admin.ModelAdmin):
             gw.status = GameWeek.Status.FINALISED
             gw.save(update_fields=["status"])
         self.message_user(request, f"Finalised and rescored {count} week(s).")
-
-    # --- bespoke results-entry screen ---------------------------------------
-
-    def results_entry_view(self, request, gw_id):
-        game_week = get_object_or_404(GameWeek, pk=gw_id)
-        fixtures = list(game_week.fixtures.all())
-        questions = list(game_week.questions.all())
-
-        if request.method == "POST":
-            action = request.POST.get("action", "save")
-
-            if action == "autofill":
-                self._autofill(request, game_week, fixtures)
-                return redirect(request.path)
-
-            self._save_results(request, game_week, fixtures, questions)
-            # New players created from results may now resolve previously
-            # unknown/ambiguous picks — re-run pick resolution for the week.
-            self._reresolve_picks(game_week)
-
-            if action == "finalise":
-                services.recompute_game_week(game_week)
-                game_week.status = GameWeek.Status.FINALISED
-                game_week.save(update_fields=["status"])
-                messages.success(
-                    request,
-                    "Results saved, all entries rescored, and the week finalised.",
-                )
-                return redirect("admin:competition_gameweek_changelist")
-
-            # plain save
-            if game_week.status in (GameWeek.Status.OPEN, GameWeek.Status.LOCKED):
-                game_week.status = GameWeek.Status.RESULTS_IN
-                game_week.save(update_fields=["status"])
-            messages.success(request, "Results saved (not yet finalised).")
-            return redirect(request.path)
-
-        # Pre-load existing goalscorers per fixture, with each scorer's team
-        # pre-selected from the linked Player where known.
-        for fixture in fixtures:
-            fixture.team_options = [fixture.home_team, fixture.away_team]
-            rows = []
-            for g in fixture.goals.all():
-                selected = ""
-                if g.player:
-                    label = g.player.national_team if game_week.is_international else g.player.club
-                    if label in fixture.team_options:
-                        selected = label
-                rows.append({"goal": g, "selected_team": selected})
-            fixture.goal_rows = rows
-
-        provider = get_results_provider()
-        context = {
-            **self.admin_site.each_context(request),
-            "title": f"Enter results — GW{game_week.week_number}",
-            "game_week": game_week,
-            "fixtures": fixtures,
-            "questions": questions,
-            "provider_name": provider.name,
-            "provider_configured": provider.is_configured(),
-            "player_suggestions": self._player_labels(game_week),
-            "player_datalist_id": PLAYER_DATALIST_ID,
-            "unresolved_count": self._unresolved_picks(game_week).count(),
-            "opts": self.model._meta,
-        }
-        return render(request, "admin/results_entry.html", context)
-
-    # --- helpers -------------------------------------------------------------
-
-    @staticmethod
-    def _player_labels(game_week):
-        return [
-            p.label(international=game_week.is_international)
-            for p in Player.objects.filter(is_active=True)
-        ]
-
-    @staticmethod
-    def _unresolved_picks(game_week):
-        """Submitted picks for the week that have text but no confident Player."""
-        return ScorerPick.objects.filter(
-            entry__game_week=game_week,
-            entry__submitted_at__isnull=False,
-            player__isnull=True,
-        ).exclude(player_name="")
-
-    @staticmethod
-    def _reresolve_picks(game_week):
-        for pick in ScorerPick.objects.filter(
-            entry__game_week=game_week, player__isnull=True
-        ).exclude(player_name=""):
-            player, needs_review = player_resolution.resolve_for_pick(pick.player_name)
-            if player or needs_review != pick.needs_review:
-                pick.player = player
-                pick.needs_review = needs_review
-                pick.save(update_fields=["player", "needs_review"])
-
-    def _save_results(self, request, game_week, fixtures, questions):
-        for fixture in fixtures:
-            home = request.POST.get(f"fixture_{fixture.id}_home", "").strip()
-            away = request.POST.get(f"fixture_{fixture.id}_away", "").strip()
-            fixture.actual_home_score = int(home) if home.isdigit() else None
-            fixture.actual_away_score = int(away) if away.isdigit() else None
-            fixture.save(update_fields=["actual_home_score", "actual_away_score"])
-
-            # Goalscorers: replace the set from the posted rows.
-            fixture.goals.all().delete()
-            names = request.POST.getlist(f"scorer_name_{fixture.id}")
-            counts = request.POST.getlist(f"scorer_goals_{fixture.id}")
-            teams = request.POST.getlist(f"scorer_team_{fixture.id}")
-            pens = set(request.POST.getlist(f"scorer_pen_{fixture.id}"))
-            for idx, name in enumerate(names):
-                name = name.strip()
-                if not name:
-                    continue
-                count = counts[idx] if idx < len(counts) else "1"
-                team_hint = teams[idx].strip() if idx < len(teams) else ""
-                player = player_resolution.resolve_or_create(
-                    name,
-                    club=None if game_week.is_international else team_hint,
-                    national_team=team_hint if game_week.is_international else None,
-                )
-                FixtureGoal.objects.create(
-                    fixture=fixture,
-                    player=player,
-                    player_name=name,
-                    goals=int(count) if count.isdigit() and int(count) > 0 else 1,
-                    is_penalty=str(idx) in pens,
-                )
-
-        for question in questions:
-            val = request.POST.get(f"tf_{question.id}", "")
-            if val == "true":
-                question.correct_answer = True
-            elif val == "false":
-                question.correct_answer = False
-            else:
-                question.correct_answer = None
-            question.save(update_fields=["correct_answer"])
-
-    def _autofill(self, request, game_week, fixtures):
-        provider = get_results_provider()
-        if not provider.is_configured():
-            messages.warning(
-                request,
-                f"No results provider configured ({provider.name}); enter results "
-                "manually.",
-            )
-            return
-        filled = 0
-        for fixture in fixtures:
-            if not fixture.external_match_id:
-                continue
-            result = provider.fetch_result(fixture.external_match_id)
-            if result is None:
-                continue
-            fixture.actual_home_score = result.home_score
-            fixture.actual_away_score = result.away_score
-            fixture.save(update_fields=["actual_home_score", "actual_away_score"])
-            fixture.goals.all().delete()
-            for s in result.scorers:
-                player = player_resolution.resolve_or_create(
-                    s.player_name,
-                    club=None if game_week.is_international else s.team,
-                    national_team=s.team if game_week.is_international else None,
-                    external_player_id=s.external_player_id,
-                )
-                FixtureGoal.objects.create(
-                    fixture=fixture,
-                    player=player,
-                    player_name=s.player_name,
-                    goals=s.goals,
-                    is_penalty=s.is_penalty,
-                    minute=s.minute,
-                )
-            filled += 1
-        self._reresolve_picks(game_week)
-        messages.success(
-            request,
-            f"Auto-filled {filled} fixture(s) from {provider.name}. "
-            "Review and override anything before finalising.",
-        )
-
-    # --- pick reconciliation -------------------------------------------------
-
-    def reconcile_view(self, request, gw_id):
-        """Map unresolved/ambiguous scorer picks to a canonical Player."""
-        game_week = get_object_or_404(GameWeek, pk=gw_id)
-
-        if request.method == "POST":
-            updated = 0
-            created = 0
-            for pick in self._unresolved_picks(game_week):
-                raw = request.POST.get(f"pick_{pick.id}", "").strip()
-                if not raw:
-                    continue
-                if raw == "new":
-                    # Create (or match) a Player from the (editable) name box —
-                    # so the admin can fix typos / "name - club" before saving —
-                    # falling back to the typed text. Club comes from its own box
-                    # or is parsed from the name.
-                    typed = (
-                        request.POST.get(f"new_name_{pick.id}", "").strip()
-                        or pick.player_name
-                    )
-                    name, club_from_text = player_resolution.parse_label(typed)
-                    club = (
-                        request.POST.get(f"new_club_{pick.id}", "").strip()
-                        or club_from_text
-                    )
-                    if not name:
-                        continue
-                    before = Player.objects.count()
-                    player = player_resolution.resolve_or_create(name, club=club)
-                    if Player.objects.count() > before:
-                        created += 1
-                else:
-                    player = (
-                        Player.objects.filter(pk=raw).first() if raw.isdigit() else None
-                    )
-                if player:
-                    pick.player = player
-                    pick.needs_review = False
-                    pick.save(update_fields=["player", "needs_review"])
-                    updated += 1
-            msg = f"Reconciled {updated} pick(s)."
-            if created:
-                msg += f" Created {created} new player(s)."
-            messages.success(request, msg)
-            if request.POST.get("then") == "finalise":
-                services.recompute_game_week(game_week)
-                game_week.status = GameWeek.Status.FINALISED
-                game_week.save(update_fields=["status"])
-                messages.success(request, "Week finalised and rescored.")
-                return redirect("admin:competition_gameweek_changelist")
-            return redirect(request.path)
-
-        rows = []
-        for pick in self._unresolved_picks(game_week).select_related(
-            "entry__participant"
-        ):
-            suggestions = player_resolution._candidates(
-                player_resolution.parse_label(pick.player_name)[0], active_only=True
-            )
-            rows.append({"pick": pick, "suggestions": suggestions})
-
-        context = {
-            **self.admin_site.each_context(request),
-            "title": f"Reconcile picks — GW{game_week.week_number}",
-            "game_week": game_week,
-            "rows": rows,
-            "all_players": Player.objects.filter(is_active=True),
-            "opts": self.model._meta,
-        }
-        return render(request, "admin/reconcile_picks.html", context)
 
 
 @admin.register(Participant)

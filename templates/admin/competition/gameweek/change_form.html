@@ -11,12 +11,12 @@
 {% block object-tools-items %}
   {% if original %}
     <li>
-      <a href="{% url 'admin:competition_gameweek_results' original.pk %}" class="addlink">
+      <a href="{% url 'manage:results' original.pk %}" class="addlink">
         Enter results
       </a>
     </li>
     <li>
-      <a href="{% url 'admin:competition_gameweek_reconcile' original.pk %}">
+      <a href="{% url 'manage:reconcile' original.pk %}">
         Reconcile picks
       </a>
     </li>

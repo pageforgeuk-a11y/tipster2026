@@ -305,6 +305,25 @@ tr.me .rank { color: var(--primary); }
 .section-score b { color: var(--primary); font-family: var(--font-head); }
 .deadline-note { color: #fff; font-weight: 700; }
 
+/* --- Manage area (organiser screens) ------------------------------------ */
+.minput {
+  font-family: var(--font-body); font-size: 1rem; color: var(--on-surface);
+  background: var(--input-bg); border: 2px solid transparent; border-radius: var(--r-sm);
+  padding: .55rem; max-width: 100%;
+}
+.minput:focus {
+  outline: none; background: #fff; border-color: var(--primary-bright);
+  box-shadow: 0 0 0 4px rgba(0, 178, 255, .15);
+}
+.scorer-line {
+  display: flex; gap: .4rem; align-items: center; flex-wrap: wrap;
+  margin-bottom: .4rem;
+}
+.scorer-line .scorer-input { flex: 2 1 8rem; }
+.scorer-line .score-input { width: 3rem; }
+.pen { font-size: .85rem; color: var(--on-surface-variant); white-space: nowrap; }
+.pen input { accent-color: var(--primary); }
+
 /* --- Desktop ------------------------------------------------------------- */
 @media (min-width: 768px) {
   .container { padding: 2rem 2.5rem 0; }
