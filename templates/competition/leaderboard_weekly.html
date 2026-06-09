@@ -21,7 +21,14 @@
       {% for row in board %}
         <tr class="{% if row.participant.id == me.id %}me{% endif %}">
           <td class="rank">{{ row.rank }}</td>
-          <td>{{ row.participant.display_name }}{% if row.score.is_non_entry_default %} <span class="muted">(no entry)</span>{% endif %}</td>
+          <td>
+            {% if row.participant.id == me.id or game_week.is_past_deadline %}
+              <a href="{% url 'team_entry' game_week.week_number row.participant.id %}">{{ row.participant.display_name }}</a>
+            {% else %}
+              {{ row.participant.display_name }}
+            {% endif %}
+            {% if row.score.is_non_entry_default %} <span class="muted">(no entry)</span>{% endif %}
+          </td>
           <td class="num">{{ row.score.s1 }}</td>
           <td class="num">{{ row.score.s2 }}</td>
           <td class="num">{{ row.score.s3 }}</td>

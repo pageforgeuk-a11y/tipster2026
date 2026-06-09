@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ subject.display_name }} — season{% endblock %}
+{% block content %}
+<h1>{{ subject.display_name }}</h1>
+<p class="muted" style="margin-top:-.5rem;">Season so far</p>
+
+<div class="hero">
+  <div class="section-score" style="margin:0;">
+    <span style="color:#fff;">Total <b style="color:#fff;">{{ total }}</b></span>
+    <span style="color:#fff;">Weeks <b style="color:#fff;">{{ weeks }}</b></span>
+    <span style="color:#fff;">Average <b style="color:#fff;">{{ average }}</b></span>
+  </div>
+</div>
+
+<div class="card">
+  <table class="lb">
+    <thead>
+      <tr><th>Week</th><th class="num">S1</th><th class="num">S2</th><th class="num">S3</th><th class="num">S4</th><th class="num">Total</th></tr>
+    </thead>
+    <tbody>
+      {% for ws in weekly %}
+        <tr>
+          <td>
+            {% if is_self or ws.game_week.is_past_deadline %}
+              <a href="{% url 'team_entry' ws.game_week.week_number subject.id %}">GW{{ ws.game_week.week_number }}</a>
+            {% else %}
+              GW{{ ws.game_week.week_number }}
+            {% endif %}
+            {% if ws.is_non_entry_default %} <span class="muted">(no entry)</span>{% endif %}
+          </td>
+          <td class="num">{{ ws.s1 }}</td>
+          <td class="num">{{ ws.s2 }}</td>
+          <td class="num">{{ ws.s3 }}</td>
+          <td class="num">{{ ws.s4 }}</td>
+          <td class="num"><b>{{ ws.total }}</b></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No scored weeks yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="btn-row"><a class="btn btn-secondary" href="{% url 'season_leaderboard' %}">Back to table</a></div>
+{% endblock %}

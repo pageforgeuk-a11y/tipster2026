@@ -1,17 +1,31 @@
 {% extends "base.html" %}
-{% block title %}My GW{{ game_week.week_number }} entry{% endblock %}
+{% block title %}{% if is_self %}My{% else %}{{ subject.display_name }}{% endif %} GW{{ game_week.week_number }} entry{% endblock %}
 {% block content %}
-<h1>My GW{{ game_week.week_number }} entry</h1>
+{% if is_self %}
+  <h1>My GW{{ game_week.week_number }} entry</h1>
+{% else %}
+  <h1>{{ subject.display_name }}</h1>
+  <p class="muted" style="margin-top:-.5rem;">Game Week {{ game_week.week_number }}</p>
+{% endif %}
 
 {% if not entry %}
-  <div class="card"><p class="muted">You didn't submit an entry for this week.</p></div>
-  <div class="btn-row"><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a></div>
+  <div class="card">
+    {% if is_self %}
+      <p class="muted">You didn't submit an entry for this week.</p>
+    {% else %}
+      <p><b>No score — no entry submitted.</b></p>
+      {% if weekly_score and weekly_score.is_non_entry_default %}
+        <p class="muted">Assigned the week's lowest total: <b>{{ weekly_score.total }}</b>.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="btn-row"><a class="btn btn-secondary" href="{{ back_url }}">Back</a></div>
 {% else %}
 
 <div class="hero">
   <div class="hero-head">
     <div>
-      <h2>Your score: {{ breakdown.total }}</h2>
+      <h2>{% if is_self %}Your{% else %}{{ subject.display_name }}'s{% endif %} score: {{ breakdown.total }}</h2>
       {% if game_week.status != 'finalised' %}
         <p class="muted" style="margin:.3rem 0 0;">Provisional — updates as results are entered, final once the week is finalised.</p>
       {% endif %}
@@ -96,6 +110,6 @@
   </table>
 </div>
 
-<div class="btn-row"><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a></div>
+<div class="btn-row"><a class="btn btn-secondary" href="{{ back_url }}">Back</a></div>
 {% endif %}
 {% endblock %}

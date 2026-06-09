@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
 from . import players as player_resolution
@@ -20,6 +21,7 @@ from .models import (
     Participant,
     Player,
     ScorerPick,
+    SeasonScore,
     TotalGoalsPrediction,
     TrueFalseAnswer,
     WeeklyScore,
@@ -190,6 +192,29 @@ def _save_entry(participant, game_week, fixtures, questions, form):
     return entry_obj
 
 
+def _entry_detail(request, viewer, subject, game_week, back_url):
+    """Render the per-item breakdown for `subject`'s entry, viewed by `viewer`."""
+    entry_obj = Entry.objects.filter(participant=subject, game_week=game_week).first()
+    weekly_score = WeeklyScore.objects.filter(
+        participant=subject, game_week=game_week
+    ).first()
+    breakdown = services.entry_breakdown(entry_obj, game_week) if entry_obj else None
+    return render(
+        request,
+        "competition/my_entry.html",
+        {
+            "game_week": game_week,
+            "entry": entry_obj,
+            "weekly_score": weekly_score,
+            "breakdown": breakdown,
+            "participant": viewer,
+            "subject": subject,
+            "is_self": subject.id == viewer.id,
+            "back_url": back_url,
+        },
+    )
+
+
 @login_required
 def my_entry(request, week_number):
     """Read-only view of the player's own entry, with scores once finalised."""
@@ -200,21 +225,78 @@ def my_entry(request, week_number):
     game_week = get_object_or_404(
         GameWeek, season=participant.season, week_number=week_number
     )
-    entry_obj = Entry.objects.filter(participant=participant, game_week=game_week).first()
-    weekly_score = WeeklyScore.objects.filter(
-        participant=participant, game_week=game_week
+
+    return _entry_detail(
+        request, participant, participant, game_week, reverse("dashboard")
+    )
+
+
+@login_required
+def team_entry(request, week_number, participant_id):
+    """View a given team's entry for a week.
+
+    Own entry is always viewable; another team's predictions only after the
+    deadline has passed (so it can't be used to copy before the deadline).
+    """
+    viewer = _participant(request)
+    if viewer is None:
+        return render(request, "competition/no_season.html")
+
+    game_week = get_object_or_404(
+        GameWeek, season=viewer.season, week_number=week_number
+    )
+    subject = get_object_or_404(Participant, id=participant_id, season=viewer.season)
+
+    if subject.id != viewer.id and not game_week.is_past_deadline:
+        messages.error(
+            request,
+            "You can only view another team's predictions after the deadline has passed.",
+        )
+        return redirect("weekly_leaderboard", week_number=week_number)
+
+
+    return _entry_detail(
+        request,
+        viewer,
+        subject,
+        game_week,
+        reverse("weekly_leaderboard", args=[week_number]),
+    )
+
+
+@login_required
+def season_team(request, participant_id):
+    """Drill-down: a team's weekly scores across the season (totals are public)."""
+    viewer = _participant(request)
+    if viewer is None:
+        return render(request, "competition/no_season.html")
+
+    subject = get_object_or_404(Participant, id=participant_id, season=viewer.season)
+    weekly = list(
+        WeeklyScore.objects.filter(
+            participant=subject, game_week__season=viewer.season
+        )
+        .select_related("game_week")
+        .order_by("game_week__week_number")
+    )
+    season_score = SeasonScore.objects.filter(
+        participant=subject, season=viewer.season
     ).first()
-    breakdown = services.entry_breakdown(entry_obj, game_week) if entry_obj else None
+    weeks = len(weekly)
+    total = season_score.total if season_score else 0
+    average = round(total / weeks, 1) if weeks else 0
 
     return render(
         request,
-        "competition/my_entry.html",
+        "competition/season_team.html",
         {
-            "game_week": game_week,
-            "entry": entry_obj,
-            "weekly_score": weekly_score,
-            "breakdown": breakdown,
-            "participant": participant,
+            "subject": subject,
+            "weekly": weekly,
+            "total": total,
+            "average": average,
+            "weeks": weeks,
+            "me": viewer,
+            "is_self": subject.id == viewer.id,
         },
     )
 

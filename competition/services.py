@@ -8,7 +8,7 @@ rescore over thousands of entries stays fast.
 from __future__ import annotations
 
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Count
 
 from . import scoring
 from .models import (
@@ -307,13 +307,28 @@ def weekly_leaderboard(game_week: GameWeek):
 
 
 def season_leaderboard(season_id: int):
-    """Ranked rows for a season: total desc, tie-break cumulative Section 1 desc."""
+    """Ranked rows for a season: total desc, tie-break cumulative Section 1 desc.
+
+    Each row also carries the number of scored weeks and the average per week.
+    """
     rows = list(
         SeasonScore.objects.filter(season_id=season_id)
         .select_related("participant")
         .order_by("-total", "-s1_total")
     )
-    return _rank(rows, key=lambda r: (r.total, r.s1_total))
+    ranked = _rank(rows, key=lambda r: (r.total, r.s1_total))
+
+    # Weeks counted per participant (each scored week has a WeeklyScore row).
+    counts = dict(
+        WeeklyScore.objects.filter(game_week__season_id=season_id)
+        .values_list("participant_id")
+        .annotate(c=Count("id"))
+    )
+    for row in ranked:
+        weeks = counts.get(row["participant"].id, 0)
+        row["weeks"] = weeks
+        row["average"] = round(row["score"].total / weeks, 1) if weeks else 0
+    return ranked
 
 
 def _rank(rows, key):

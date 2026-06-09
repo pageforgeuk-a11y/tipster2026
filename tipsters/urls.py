@@ -77,6 +77,11 @@ urlpatterns = [
     path("week/<int:week_number>/entry/", comp_views.entry, name="entry"),
     path("week/<int:week_number>/my-entry/", comp_views.my_entry, name="my_entry"),
     path(
+        "week/<int:week_number>/team/<int:participant_id>/",
+        comp_views.team_entry,
+        name="team_entry",
+    ),
+    path(
         "week/<int:week_number>/leaderboard/",
         comp_views.weekly_leaderboard,
         name="weekly_leaderboard",
@@ -86,6 +91,7 @@ urlpatterns = [
         comp_views.season_leaderboard,
         name="season_leaderboard",
     ),
+    path("team/<int:participant_id>/season/", comp_views.season_team, name="season_team"),
     # Vercel Cron endpoint for reminders (secured by CRON_SECRET).
     path("cron/send-reminders/", send_reminders_endpoint, name="cron_send_reminders"),
 ]
