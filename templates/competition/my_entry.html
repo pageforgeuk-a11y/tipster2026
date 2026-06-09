@@ -33,7 +33,7 @@
       {% for r in breakdown.s1_rows %}
         <tr>
           <td>{{ r.fixture.home_team }} v {{ r.fixture.away_team }}</td>
-          <td class="num">{{ r.pred_home|default:"–" }}–{{ r.pred_away|default:"–" }}</td>
+          <td class="num">{{ r.pred_home|default_if_none:"–" }}–{{ r.pred_away|default_if_none:"–" }}</td>
           <td class="num">{% if r.has_result %}{{ r.fixture.actual_home_score }}–{{ r.fixture.actual_away_score }}{% else %}–{% endif %}</td>
           <td class="num"><b>{{ r.points }}</b></td>
         </tr>
@@ -47,7 +47,7 @@
 <div class="card">
   <table class="lb">
     <tbody>
-      <tr><td>Your prediction</td><td class="num"><b>{{ breakdown.s2.predicted|default:"–" }}</b></td></tr>
+      <tr><td>Your prediction</td><td class="num"><b>{{ breakdown.s2.predicted|default_if_none:"–" }}</b></td></tr>
       <tr><td>Actual total</td><td class="num">{% if breakdown.s2.results_complete %}{{ breakdown.s2.actual }}{% else %}<span class="muted">pending</span>{% endif %}</td></tr>
       <tr><td><b>Points</b></td><td class="num"><b>{{ breakdown.s2.points }}</b></td></tr>
     </tbody>
