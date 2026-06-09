@@ -397,17 +397,38 @@ class GameWeekAdmin(admin.ModelAdmin):
 
         if request.method == "POST":
             updated = 0
+            created = 0
             for pick in self._unresolved_picks(game_week):
                 raw = request.POST.get(f"pick_{pick.id}", "").strip()
                 if not raw:
                     continue
-                player = Player.objects.filter(pk=raw).first() if raw.isdigit() else None
+                if raw == "new":
+                    # Create (or match) a Player from the typed text, optionally
+                    # with a club typed in the row's club box for disambiguation.
+                    name, club_from_text = player_resolution.parse_label(
+                        pick.player_name
+                    )
+                    club = (
+                        request.POST.get(f"new_club_{pick.id}", "").strip()
+                        or club_from_text
+                    )
+                    before = Player.objects.count()
+                    player = player_resolution.resolve_or_create(name, club=club)
+                    if Player.objects.count() > before:
+                        created += 1
+                else:
+                    player = (
+                        Player.objects.filter(pk=raw).first() if raw.isdigit() else None
+                    )
                 if player:
                     pick.player = player
                     pick.needs_review = False
                     pick.save(update_fields=["player", "needs_review"])
                     updated += 1
-            messages.success(request, f"Reconciled {updated} pick(s).")
+            msg = f"Reconciled {updated} pick(s)."
+            if created:
+                msg += f" Created {created} new player(s)."
+            messages.success(request, msg)
             if request.POST.get("then") == "finalise":
                 services.recompute_game_week(game_week)
                 game_week.status = GameWeek.Status.FINALISED
