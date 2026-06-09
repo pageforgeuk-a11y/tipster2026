@@ -88,11 +88,22 @@ def resolve_for_pick(raw: str):
 
 
 def resolve_or_create(name, club=None, national_team=None, external_player_id=None):
-    """Return a canonical Player for a goalscorer, creating one if needed."""
-    name = (name or "").strip()
+    """Return a canonical Player for a goalscorer, creating one if needed.
+
+    Tolerates a labelled name like "Danny Welbeck (Brighton)" or
+    "Danny Welbeck - Brighton": the club is split off the name (so we don't
+    create a player literally called "Danny Welbeck (Brighton)") and used as the
+    club hint when none was passed explicitly.
+    """
+    parsed_name, parsed_club = parse_label(name or "")
+    name = parsed_name.strip()
     club = (club or "").strip()
     national_team = (national_team or "").strip()
     external_player_id = (external_player_id or "").strip()
+    # Fall back to the club parsed out of the label only when the caller didn't
+    # already give us a club or national team to use.
+    if not club and not national_team and parsed_club:
+        club = parsed_club
 
     if external_player_id:
         existing = Player.objects.filter(

@@ -67,6 +67,25 @@ class ResolutionTests(TestCase):
         second = resolve_or_create("totally different text", external_player_id="9001")
         self.assertEqual(first.id, second.id)
 
+    def test_resolve_or_create_matches_existing_from_label(self):
+        # Picking "Danny Welbeck (Brighton)" from a dropdown must match the
+        # existing player, not create a duplicate named with the whole label.
+        existing = Player.objects.create(full_name="Danny Welbeck", club="Brighton")
+        before = Player.objects.count()
+        got = resolve_or_create("Danny Welbeck (Brighton)")
+        self.assertEqual(got.id, existing.id)
+        self.assertEqual(Player.objects.count(), before)  # no new row
+
+    def test_resolve_or_create_strips_label_when_creating(self):
+        player = resolve_or_create("Bukayo Saka (Arsenal)")
+        self.assertEqual(player.full_name, "Bukayo Saka")  # not the full label
+        self.assertEqual(player.club, "Arsenal")
+
+    def test_resolve_or_create_handles_dash_label(self):
+        player = resolve_or_create("Cole Palmer - Chelsea")
+        self.assertEqual(player.full_name, "Cole Palmer")
+        self.assertEqual(player.club, "Chelsea")
+
 
 class IdScoringTests(TestCase):
     def setUp(self):
