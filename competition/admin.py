@@ -22,6 +22,7 @@ from .models import (
     MatchPrediction,
     Participant,
     Player,
+    QuestionTemplate,
     ScorerPick,
     Season,
     SeasonScore,
@@ -32,10 +33,11 @@ from .models import (
 )
 from .providers import get_results_provider
 
-# Shared <datalist> id wired up by GameWeekAdmin's change form (see
+# Shared <datalist> ids wired up by GameWeekAdmin's change form (see
 # templates/admin/competition/gameweek/change_form.html).
 TEAM_DATALIST_ID = "team-suggestions"
 PLAYER_DATALIST_ID = "player-suggestions"
+QUESTION_DATALIST_ID = "question-suggestions"
 
 
 @admin.register(Player)
@@ -69,6 +71,13 @@ class TeamAdmin(admin.ModelAdmin):
     search_fields = ("name", "short_name")
 
 
+@admin.register(QuestionTemplate)
+class QuestionTemplateAdmin(admin.ModelAdmin):
+    list_display = ("text", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("text",)
+
+
 @admin.register(Season)
 class SeasonAdmin(admin.ModelAdmin):
     list_display = ("name", "start_date", "is_active")
@@ -99,8 +108,26 @@ class FixtureInline(admin.TabularInline):
     ordering = ("order",)
 
 
+class TrueFalseQuestionInlineForm(forms.ModelForm):
+    """Free-text question input backed by an autocomplete bank of past questions."""
+
+    class Meta:
+        model = TrueFalseQuestion
+        fields = "__all__"
+        widgets = {
+            "text": forms.TextInput(
+                attrs={
+                    "list": QUESTION_DATALIST_ID,
+                    "autocomplete": "off",
+                    "size": 70,
+                }
+            )
+        }
+
+
 class TrueFalseQuestionInline(admin.TabularInline):
     model = TrueFalseQuestion
+    form = TrueFalseQuestionInlineForm
     extra = 0
     fields = ("order", "text")
     ordering = ("order",)
@@ -129,6 +156,12 @@ class GameWeekAdmin(admin.ModelAdmin):
             Team.objects.filter(is_active=True).values_list("name", flat=True)
         )
         extra_context["team_datalist_id"] = TEAM_DATALIST_ID
+        extra_context["question_suggestions"] = list(
+            QuestionTemplate.objects.filter(is_active=True).values_list(
+                "text", flat=True
+            )
+        )
+        extra_context["question_datalist_id"] = QUESTION_DATALIST_ID
         return super()._changeform_view(request, object_id, form_url, extra_context)
 
     # --- custom URLs ---------------------------------------------------------

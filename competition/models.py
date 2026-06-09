@@ -209,6 +209,25 @@ class TrueFalseQuestion(models.Model):
         return f"Q{self.order}: {self.text}"
 
 
+class QuestionTemplate(models.Model):
+    """A reusable True/False question (a 'question bank').
+
+    Self-populating like Team: saving a TrueFalseQuestion upserts its text here
+    (see competition.signals), so the admin gets autocomplete of previously-used
+    questions when writing a week's 8. Free text is always still allowed.
+    """
+
+    text = models.CharField(max_length=300, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["text"]
+
+    def __str__(self):
+        return self.text
+
+
 class FixtureGoal(models.Model):
     """A goalscorer record for a fixture, used by Section 4 scoring."""
 

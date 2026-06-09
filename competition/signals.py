@@ -8,7 +8,7 @@ admin's autocomplete list grows organically without manual upkeep.
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import Fixture, Team
+from .models import Fixture, QuestionTemplate, Team, TrueFalseQuestion
 
 
 def _ensure_team(name: str) -> None:
@@ -23,3 +23,16 @@ def _ensure_team(name: str) -> None:
 def populate_teams_from_fixture(sender, instance, **kwargs):
     _ensure_team(instance.home_team)
     _ensure_team(instance.away_team)
+
+
+def _ensure_question(text: str) -> None:
+    text = (text or "").strip()
+    if not text:
+        return
+    if not QuestionTemplate.objects.filter(text__iexact=text).exists():
+        QuestionTemplate.objects.create(text=text)
+
+
+@receiver(post_save, sender=TrueFalseQuestion)
+def populate_question_bank(sender, instance, **kwargs):
+    _ensure_question(instance.text)

@@ -29,4 +29,7 @@
 <datalist id="{{ team_datalist_id }}">
   {% for name in team_suggestions %}<option value="{{ name }}"></option>{% endfor %}
 </datalist>
+<datalist id="{{ question_datalist_id }}">
+  {% for q in question_suggestions %}<option value="{{ q }}"></option>{% endfor %}
+</datalist>
 {% endblock %}
