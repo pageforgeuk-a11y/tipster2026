@@ -18,21 +18,27 @@
       <tr><th>Week</th><th class="num">S1</th><th class="num">S2</th><th class="num">S3</th><th class="num">S4</th><th class="num">Total</th></tr>
     </thead>
     <tbody>
-      {% for ws in weekly %}
+      {% for row in rows %}
         <tr>
           <td>
-            {% if is_self or ws.game_week.is_past_deadline %}
-              <a href="{% url 'team_entry' ws.game_week.week_number subject.id %}">GW{{ ws.game_week.week_number }}</a>
+            {% if row.ws and is_self or row.ws and row.game_week.is_past_deadline %}
+              <a href="{% url 'team_entry' row.game_week.week_number subject.id %}">GW{{ row.game_week.week_number }}</a>
             {% else %}
-              GW{{ ws.game_week.week_number }}
+              GW{{ row.game_week.week_number }}
             {% endif %}
-            {% if ws.is_non_entry_default %} <span class="muted">(no entry)</span>{% endif %}
+            {% if not row.ws %} <span class="muted">(joined later)</span>
+            {% elif row.ws.is_non_entry_default %} <span class="muted">(no entry)</span>{% endif %}
           </td>
-          <td class="num">{{ ws.s1 }}</td>
-          <td class="num">{{ ws.s2 }}</td>
-          <td class="num">{{ ws.s3 }}</td>
-          <td class="num">{{ ws.s4 }}</td>
-          <td class="num"><b>{{ ws.total }}</b></td>
+          {% if row.ws %}
+            <td class="num">{{ row.ws.s1 }}</td>
+            <td class="num">{{ row.ws.s2 }}</td>
+            <td class="num">{{ row.ws.s3 }}</td>
+            <td class="num">{{ row.ws.s4 }}</td>
+            <td class="num"><b>{{ row.ws.total }}</b></td>
+          {% else %}
+            <td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">–</td>
+            <td class="num"><b>0</b></td>
+          {% endif %}
         </tr>
       {% empty %}
         <tr><td colspan="6" class="muted">No scored weeks yet.</td></tr>

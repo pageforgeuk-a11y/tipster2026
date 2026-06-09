@@ -272,18 +272,27 @@ def season_team(request, participant_id):
         return render(request, "competition/no_season.html")
 
     subject = get_object_or_404(Participant, id=participant_id, season=viewer.season)
-    weekly = list(
-        WeeklyScore.objects.filter(
+
+    # Every scored week in the season — the average divisor for everyone. Weeks
+    # before the player joined show as a blank row (count as 0 in the average).
+    scored_gws = list(
+        GameWeek.objects.filter(season=viewer.season, weekly_scores__isnull=False)
+        .distinct()
+        .order_by("week_number")
+    )
+    ws_by_gw = {
+        w.game_week_id: w
+        for w in WeeklyScore.objects.filter(
             participant=subject, game_week__season=viewer.season
         )
-        .select_related("game_week")
-        .order_by("game_week__week_number")
-    )
+    }
+    rows = [{"game_week": gw, "ws": ws_by_gw.get(gw.id)} for gw in scored_gws]
+
     season_score = SeasonScore.objects.filter(
         participant=subject, season=viewer.season
     ).first()
-    weeks = len(weekly)
     total = season_score.total if season_score else 0
+    weeks = len(scored_gws)
     average = round(total / weeks, 1) if weeks else 0
 
     return render(
@@ -291,7 +300,7 @@ def season_team(request, participant_id):
         "competition/season_team.html",
         {
             "subject": subject,
-            "weekly": weekly,
+            "rows": rows,
             "total": total,
             "average": average,
             "weeks": weeks,

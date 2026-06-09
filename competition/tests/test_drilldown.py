@@ -87,3 +87,30 @@ class SeasonAverageTests(TestCase):
         row = board[0]
         self.assertEqual(row["weeks"], 3)
         self.assertEqual(row["average"], 20.0)  # 60 / 3
+
+    def test_late_joiner_average_divides_by_all_scored_weeks(self):
+        season = Season.objects.create(name="S", is_active=True)
+        early = Participant.objects.create(
+            user=User.objects.create_user("e@x.com", "e@x.com", "pw"),
+            season=season, display_name="Early", join_week=1,
+        )
+        late = Participant.objects.create(
+            user=User.objects.create_user("l@x.com", "l@x.com", "pw"),
+            season=season, display_name="Late", join_week=3,
+        )
+        gws = {}
+        for wk in (1, 2, 3):
+            gws[wk] = GameWeek.objects.create(
+                season=season, week_number=wk, deadline=timezone.now()
+            )
+        # Early scored in all three weeks; Late only in week 3.
+        for wk in (1, 2, 3):
+            WeeklyScore.objects.create(participant=early, game_week=gws[wk], total=10)
+        WeeklyScore.objects.create(participant=late, game_week=gws[3], total=9)
+        SeasonScore.objects.create(participant=early, season=season, total=30)
+        SeasonScore.objects.create(participant=late, season=season, total=9)
+
+        board = {r["participant"].display_name: r for r in services.season_leaderboard(season.id)}
+        # Same divisor (3 scored weeks) for everyone.
+        self.assertEqual(board["Early"]["average"], 10.0)  # 30 / 3
+        self.assertEqual(board["Late"]["average"], 3.0)    # 9 / 3, not 9 / 1

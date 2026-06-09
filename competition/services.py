@@ -8,7 +8,6 @@ rescore over thousands of entries stays fast.
 from __future__ import annotations
 
 from django.db import transaction
-from django.db.models import Count
 
 from . import scoring
 from .models import (
@@ -318,17 +317,26 @@ def season_leaderboard(season_id: int):
     )
     ranked = _rank(rows, key=lambda r: (r.total, r.s1_total))
 
-    # Weeks counted per participant (each scored week has a WeeklyScore row).
-    counts = dict(
-        WeeklyScore.objects.filter(game_week__season_id=season_id)
-        .values_list("participant_id")
-        .annotate(c=Count("id"))
-    )
+    # Average is over ALL weeks scored so far (the same divisor for everyone), so
+    # pre-join / missed weeks count as zero and a late joiner can't top the
+    # average on a small sample.
+    scored_weeks = scored_week_count(season_id)
     for row in ranked:
-        weeks = counts.get(row["participant"].id, 0)
-        row["weeks"] = weeks
-        row["average"] = round(row["score"].total / weeks, 1) if weeks else 0
+        row["weeks"] = scored_weeks
+        row["average"] = (
+            round(row["score"].total / scored_weeks, 1) if scored_weeks else 0
+        )
     return ranked
+
+
+def scored_week_count(season_id: int) -> int:
+    """Number of distinct game weeks in the season that have been scored."""
+    return (
+        WeeklyScore.objects.filter(game_week__season_id=season_id)
+        .values("game_week")
+        .distinct()
+        .count()
+    )
 
 
 def _rank(rows, key):
