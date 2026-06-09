@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Home — K.H.S.S.C. Tipsters{% endblock %}
 {% block content %}
-<h1>Hi {{ user.first_name|default:participant.display_name }}</h1>
-<p class="muted" style="margin-top:-.5rem;">Team: <b>{{ participant.display_name }}</b></p>
+<p style="font-size:1.25rem;margin:.4rem 0 1rem;"><span class="muted">Team:</span> <b>{{ participant.display_name }}</b></p>
 
 {% if open_week %}
 <div class="hero">
