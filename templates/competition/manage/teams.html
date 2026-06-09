@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Teams — Manage{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+  <h1 style="margin:0;">Teams</h1>
+  <a class="btn" href="{% url 'manage:team_new' %}" style="width:auto;padding:.5rem 1rem;">+ Add</a>
+</div>
+
+<form method="get" class="card" style="margin-top:1rem;">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search teams…" class="minput" style="width:100%;">
+</form>
+
+<div class="card">
+  <table class="lb">
+    <thead><tr><th>Name</th><th>Short</th><th>Active</th></tr></thead>
+    <tbody>
+      {% for t in teams %}
+        <tr>
+          <td><a href="{% url 'manage:team_edit' t.id %}">{{ t.name }}</a></td>
+          <td>{{ t.short_name|default:"–" }}</td>
+          <td>{% if t.is_active %}✓{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" class="muted">No teams{% if q %} match “{{ q }}”{% endif %}.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

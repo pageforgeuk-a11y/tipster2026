@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Seasons — Manage{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+  <h1 style="margin:0;">Seasons</h1>
+  <a class="btn" href="{% url 'manage:season_new' %}" style="width:auto;padding:.5rem 1rem;">+ New season</a>
+</div>
+
+<div class="card" style="margin-top:1rem;">
+  <table class="lb">
+    <thead><tr><th>Name</th><th>Start</th><th>Status</th><th class="num"></th></tr></thead>
+    <tbody>
+      {% for s in seasons %}
+        <tr class="{% if s.is_active %}me{% endif %}">
+          <td><a href="{% url 'manage:season_edit' s.id %}">{{ s.name }}</a></td>
+          <td>{{ s.start_date|default:"–" }}</td>
+          <td>{% if s.is_active %}<span class="pill pill-open">Active</span>{% else %}<span class="pill pill-draft">Archived</span>{% endif %}</td>
+          <td class="num">
+            {% if s.is_active %}
+              <form method="post" action="{% url 'manage:season_archive' s.id %}" style="margin:0;display:inline;">{% csrf_token %}
+                <button class="linkbtn" type="submit">Archive</button>
+              </form>
+            {% else %}
+              <form method="post" action="{% url 'manage:season_activate' s.id %}" style="margin:0;display:inline;"
+                    onsubmit="return confirm('Make this the active season? The current active season will be archived.');">{% csrf_token %}
+                <button class="linkbtn" type="submit">Activate</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="muted">No seasons yet. <a href="{% url 'manage:season_new' %}">Create one →</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Question bank — Manage{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+  <h1 style="margin:0;">Question bank</h1>
+  <a class="btn" href="{% url 'manage:question_new' %}" style="width:auto;padding:.5rem 1rem;">+ Add</a>
+</div>
+
+<form method="get" class="card" style="margin-top:1rem;">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search questions…" class="minput" style="width:100%;">
+</form>
+
+<div class="card">
+  <table class="lb">
+    <thead><tr><th>Question</th><th>Active</th></tr></thead>
+    <tbody>
+      {% for item in questions %}
+        <tr>
+          <td><a href="{% url 'manage:question_edit' item.id %}">{{ item.text }}</a></td>
+          <td>{% if item.is_active %}✓{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="2" class="muted">No questions{% if q %} match “{{ q }}”{% endif %}.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

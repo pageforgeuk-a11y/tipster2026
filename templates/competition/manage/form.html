@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<h1>{{ title }}</h1>
+
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<ul class="errorlist">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    {% for field in form %}
+      {% if field.field.widget.input_type == 'checkbox' %}
+        <div class="field"><label class="check-label">{{ field }} <span>{{ field.label }}</span></label>{{ field.errors }}</div>
+      {% else %}
+        <div class="field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small class="helptext">{{ field.help_text|safe }}</small>{% endif %}
+          {{ field.errors }}
+        </div>
+      {% endif %}
+    {% endfor %}
+    <div class="btn-row">
+      <button class="btn" type="submit">Save</button>
+      <a class="btn btn-secondary" href="{{ back_url }}">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% if delete_url %}
+  <form method="post" action="{{ delete_url }}" onsubmit="return confirm('Delete this permanently? Linked picks/goals will be unlinked.');">
+    {% csrf_token %}
+    <button class="btn btn-secondary" type="submit" style="color:var(--error);">Delete</button>
+  </form>
+{% endif %}
+
+<datalist id="team-suggestions">
+  {% for n in team_suggestions %}<option value="{{ n }}"></option>{% endfor %}
+</datalist>
+{% endblock %}

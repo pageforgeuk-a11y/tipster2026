@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Players — Manage{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+  <h1 style="margin:0;">Players</h1>
+  <a class="btn" href="{% url 'manage:player_new' %}" style="width:auto;padding:.5rem 1rem;">+ Add</a>
+</div>
+
+<form method="get" class="card" style="margin-top:1rem;">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search players…" class="minput" style="width:100%;">
+</form>
+
+<form method="post" action="{% url 'manage:players_merge' %}">
+  {% csrf_token %}
+  <div class="card">
+    <p class="muted">Tick two or more, then <b>Merge</b> to combine duplicates into the first (alphabetical). Re-finalise affected weeks afterwards.</p>
+    <table class="lb">
+      <thead><tr><th></th><th>Name</th><th>Club</th><th>Country</th><th class="num"></th></tr></thead>
+      <tbody>
+        {% for p in players %}
+          <tr>
+            <td><input type="checkbox" name="ids" value="{{ p.id }}"></td>
+            <td><a href="{% url 'manage:player_edit' p.id %}">{{ p.full_name }}</a>{% if not p.is_active %} <span class="muted">(inactive)</span>{% endif %}</td>
+            <td>{{ p.club|default:"–" }}</td>
+            <td>{{ p.national_team|default:"–" }}</td>
+            <td class="num"><a href="{% url 'manage:player_edit' p.id %}">edit</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="muted">No players{% if q %} match “{{ q }}”{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if players %}<button class="btn btn-secondary" type="submit">Merge selected</button>{% endif %}
+</form>
+{% endblock %}

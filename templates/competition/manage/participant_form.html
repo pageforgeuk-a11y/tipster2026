@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ participant.display_name }}{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<h1>{{ participant.display_name }}</h1>
+<p class="muted">{{ participant.user.get_full_name|default:participant.user.email }} · {{ participant.user.email }}</p>
+
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <div class="field">
+      <label class="check-label">
+        <input type="checkbox" name="is_organiser" {% if is_organiser %}checked{% endif %}>
+        <span>Organiser — can access this Manage area</span>
+      </label>
+    </div>
+    <div class="btn-row">
+      <button class="btn" type="submit">Save</button>
+      <a class="btn btn-secondary" href="{% url 'manage:participants' %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

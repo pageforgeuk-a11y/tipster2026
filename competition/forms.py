@@ -8,10 +8,68 @@ integers server-side.
 from django import forms
 from django.utils import timezone
 
-from .models import GameWeek
+from .models import GameWeek, Participant, Player, QuestionTemplate, Season, Team
 
 # datetime-local input/parse format (no seconds).
 DT_LOCAL = "%Y-%m-%dT%H:%M"
+
+_TEXT = forms.TextInput(attrs={"class": "minput"})
+
+
+class PlayerForm(forms.ModelForm):
+    class Meta:
+        model = Player
+        fields = ["full_name", "club", "national_team", "external_player_id", "is_active"]
+        widgets = {
+            "full_name": forms.TextInput(attrs={"class": "minput"}),
+            "club": forms.TextInput(attrs={"class": "minput", "list": "team-suggestions"}),
+            "national_team": forms.TextInput(attrs={"class": "minput"}),
+            "external_player_id": forms.TextInput(attrs={"class": "minput"}),
+        }
+
+
+class TeamForm(forms.ModelForm):
+    class Meta:
+        model = Team
+        fields = ["name", "short_name", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "minput"}),
+            "short_name": forms.TextInput(attrs={"class": "minput"}),
+        }
+
+
+class QuestionTemplateForm(forms.ModelForm):
+    class Meta:
+        model = QuestionTemplate
+        fields = ["text", "is_active"]
+        widgets = {"text": forms.TextInput(attrs={"class": "minput", "size": 60})}
+
+
+class SeasonForm(forms.ModelForm):
+    class Meta:
+        model = Season
+        fields = ["name", "start_date", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "minput"}),
+            "start_date": forms.DateInput(
+                attrs={"type": "date", "class": "minput"}, format="%Y-%m-%d"
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["start_date"].input_formats = ["%Y-%m-%d"]
+        self.fields["start_date"].required = False
+
+
+class ParticipantForm(forms.ModelForm):
+    class Meta:
+        model = Participant
+        fields = ["display_name", "join_week"]
+        widgets = {
+            "display_name": forms.TextInput(attrs={"class": "minput"}),
+            "join_week": forms.NumberInput(attrs={"class": "minput", "min": 1, "max": 40}),
+        }
 
 
 class GameWeekForm(forms.ModelForm):

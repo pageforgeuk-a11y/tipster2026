@@ -328,6 +328,18 @@ tr.me .rank { color: var(--primary); }
 }
 .check-label input { accent-color: var(--primary); flex: 0 0 auto; }
 
+/* Manage sub-nav */
+.manage-nav {
+  display: flex; gap: .4rem; overflow-x: auto; padding-bottom: .4rem;
+  margin-bottom: 1rem; -webkit-overflow-scrolling: touch;
+}
+.manage-nav a {
+  flex: 0 0 auto; padding: .4rem .8rem; border-radius: var(--r-full);
+  background: #fff; border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant); font-size: .85rem; font-weight: 600;
+}
+.manage-nav a:hover { color: var(--primary); border-color: var(--primary-bright); }
+
 /* Game week setup rows */
 .setup-fixture, .setup-q {
   display: flex; gap: .4rem; align-items: center; flex-wrap: wrap;

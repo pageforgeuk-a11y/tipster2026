@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Manage — K.H.S.S.C. Tipsters{% endblock %}
 {% block content %}
+{% include "competition/manage/_nav.html" %}
 <h1>Manage</h1>
 
 {% if not season %}
   <div class="card">
-    <p>No active season yet. Create one (and tick <i>is active</i>) in the
-      <a href="/admin/competition/season/add/">Django admin</a>, then come back.</p>
+    <p>No active season yet. <a href="{% url 'manage:season_new' %}">Create one →</a>
+      (tick <i>is active</i> when you make it).</p>
   </div>
 {% else %}
 <div class="hero">

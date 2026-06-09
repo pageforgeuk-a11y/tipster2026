@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Teams entered — Manage{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<h1>Teams entered</h1>
+{% if season %}<p class="muted">{{ season.name }}</p>{% endif %}
+
+<div class="card">
+  <table class="lb">
+    <thead><tr><th>Team</th><th>Player</th><th class="num">Join wk</th><th>Organiser</th></tr></thead>
+    <tbody>
+      {% for p in participants %}
+        <tr>
+          <td><a href="{% url 'manage:participant_edit' p.id %}">{{ p.display_name }}</a></td>
+          <td>{{ p.user.get_full_name|default:p.user.email }}</td>
+          <td class="num">{{ p.join_week }}</td>
+          <td>{% if p.is_org %}✓{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="muted">No teams registered yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

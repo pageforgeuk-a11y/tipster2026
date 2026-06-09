@@ -8,16 +8,25 @@ low-level fallback.
 from functools import wraps
 
 from django.contrib import messages
+from django.contrib.auth.models import Group
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
-
 from django.utils.dateparse import parse_datetime
 
+from . import players as player_resolution
 from . import results_ops, services
-from .forms import GameWeekForm
+from .forms import (
+    GameWeekForm,
+    ParticipantForm,
+    PlayerForm,
+    QuestionTemplateForm,
+    SeasonForm,
+    TeamForm,
+)
 from .models import (
     Entry,
     Fixture,
@@ -341,3 +350,278 @@ def reconcile(request, gw_id):
             "all_players": Player.objects.filter(is_active=True),
         },
     )
+
+
+# --- generic CRUD helpers ----------------------------------------------------
+
+
+def _search(model, q, fields):
+    qs = model.objects.all()
+    if q:
+        cond = Q()
+        for f in fields:
+            cond |= Q(**{f + "__icontains": q})
+        qs = qs.filter(cond)
+    return qs
+
+
+def _modelform(request, form_class, instance, title, list_url, delete_url=None):
+    if request.method == "POST":
+        form = form_class(request.POST, instance=instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Saved.")
+            return redirect(list_url)
+    else:
+        form = form_class(instance=instance)
+    return render(
+        request,
+        "competition/manage/form.html",
+        {
+            "form": form,
+            "title": title,
+            "back_url": list_url,
+            "delete_url": delete_url,
+            "team_suggestions": _team_names(),
+        },
+    )
+
+
+# --- players -----------------------------------------------------------------
+
+
+@organiser_required
+def players(request):
+    q = request.GET.get("q", "").strip()
+    rows = _search(Player, q, ["full_name", "club", "national_team"]).order_by(
+        "full_name"
+    )
+    return render(
+        request,
+        "competition/manage/players.html",
+        {"players": rows, "q": q, "team_suggestions": _team_names()},
+    )
+
+
+@organiser_required
+def player_new(request):
+    return _modelform(request, PlayerForm, None, "New player", reverse("manage:players"))
+
+
+@organiser_required
+def player_edit(request, pk):
+    player = get_object_or_404(Player, pk=pk)
+    return _modelform(
+        request,
+        PlayerForm,
+        player,
+        f"Edit {player.full_name}",
+        reverse("manage:players"),
+        delete_url=reverse("manage:player_delete", args=[pk]),
+    )
+
+
+@organiser_required
+def player_delete(request, pk):
+    if request.method == "POST":
+        Player.objects.filter(pk=pk).delete()
+        messages.success(request, "Player deleted.")
+    return redirect("manage:players")
+
+
+@organiser_required
+def players_merge(request):
+    ids = request.POST.getlist("ids")
+    chosen = list(Player.objects.filter(id__in=ids).order_by("full_name", "id"))
+    if len(chosen) < 2:
+        messages.warning(request, "Select two or more players to merge.")
+    else:
+        primary, dupes = chosen[0], chosen[1:]
+        merged = player_resolution.merge_players(primary, dupes)
+        messages.success(
+            request,
+            f"Merged {merged} player(s) into “{primary}”. Re-finalise affected weeks "
+            "to refresh scores.",
+        )
+    return redirect("manage:players")
+
+
+def _team_names():
+    return list(Team.objects.filter(is_active=True).values_list("name", flat=True))
+
+
+# --- teams -------------------------------------------------------------------
+
+
+@organiser_required
+def teams(request):
+    q = request.GET.get("q", "").strip()
+    rows = _search(Team, q, ["name", "short_name"]).order_by("name")
+    return render(request, "competition/manage/teams.html", {"teams": rows, "q": q})
+
+
+@organiser_required
+def team_new(request):
+    return _modelform(request, TeamForm, None, "New team", reverse("manage:teams"))
+
+
+@organiser_required
+def team_edit(request, pk):
+    team = get_object_or_404(Team, pk=pk)
+    return _modelform(
+        request,
+        TeamForm,
+        team,
+        f"Edit {team.name}",
+        reverse("manage:teams"),
+        delete_url=reverse("manage:team_delete", args=[pk]),
+    )
+
+
+@organiser_required
+def team_delete(request, pk):
+    if request.method == "POST":
+        Team.objects.filter(pk=pk).delete()
+        messages.success(request, "Team deleted.")
+    return redirect("manage:teams")
+
+
+# --- question bank -----------------------------------------------------------
+
+
+@organiser_required
+def questions(request):
+    q = request.GET.get("q", "").strip()
+    rows = _search(QuestionTemplate, q, ["text"]).order_by("text")
+    return render(
+        request, "competition/manage/questions.html", {"questions": rows, "q": q}
+    )
+
+
+@organiser_required
+def question_new(request):
+    return _modelform(
+        request, QuestionTemplateForm, None, "New question", reverse("manage:questions")
+    )
+
+
+@organiser_required
+def question_edit(request, pk):
+    item = get_object_or_404(QuestionTemplate, pk=pk)
+    return _modelform(
+        request,
+        QuestionTemplateForm,
+        item,
+        "Edit question",
+        reverse("manage:questions"),
+        delete_url=reverse("manage:question_delete", args=[pk]),
+    )
+
+
+@organiser_required
+def question_delete(request, pk):
+    if request.method == "POST":
+        QuestionTemplate.objects.filter(pk=pk).delete()
+        messages.success(request, "Question deleted.")
+    return redirect("manage:questions")
+
+
+# --- participants ------------------------------------------------------------
+
+
+@organiser_required
+def participants(request):
+    season = Season.objects.filter(is_active=True).first()
+    rows = []
+    if season:
+        org_ids = set(
+            Group.objects.get(name=ORGANISER_GROUP).user_set.values_list(
+                "id", flat=True
+            )
+        )
+        rows = list(
+            Participant.objects.filter(season=season)
+            .select_related("user")
+            .order_by("display_name")
+        )
+        for p in rows:
+            p.is_org = p.user_id in org_ids
+    return render(
+        request,
+        "competition/manage/participants.html",
+        {"participants": rows, "season": season},
+    )
+
+
+@organiser_required
+def participant_edit(request, pk):
+    participant = get_object_or_404(Participant, pk=pk)
+    group = Group.objects.get(name=ORGANISER_GROUP)
+    if request.method == "POST":
+        form = ParticipantForm(request.POST, instance=participant)
+        if form.is_valid():
+            form.save()
+            if request.POST.get("is_organiser"):
+                participant.user.groups.add(group)
+            else:
+                participant.user.groups.remove(group)
+            messages.success(request, "Participant saved.")
+            return redirect("manage:participants")
+    else:
+        form = ParticipantForm(instance=participant)
+    return render(
+        request,
+        "competition/manage/participant_form.html",
+        {
+            "form": form,
+            "participant": participant,
+            "is_organiser": participant.user.groups.filter(
+                name=ORGANISER_GROUP
+            ).exists(),
+        },
+    )
+
+
+# --- seasons -----------------------------------------------------------------
+
+
+@organiser_required
+def seasons(request):
+    return render(
+        request,
+        "competition/manage/seasons.html",
+        {"seasons": Season.objects.all()},
+    )
+
+
+@organiser_required
+def season_new(request):
+    return _modelform(request, SeasonForm, None, "New season", reverse("manage:seasons"))
+
+
+@organiser_required
+def season_edit(request, pk):
+    season = get_object_or_404(Season, pk=pk)
+    return _modelform(
+        request, SeasonForm, season, f"Edit {season.name}", reverse("manage:seasons")
+    )
+
+
+@organiser_required
+def season_activate(request, pk):
+    if request.method == "POST":
+        season = get_object_or_404(Season, pk=pk)
+        season.is_active = True
+        season.save()  # model deactivates the others
+        messages.success(request, f"“{season.name}” is now the active season.")
+    return redirect("manage:seasons")
+
+
+@organiser_required
+def season_archive(request, pk):
+    if request.method == "POST":
+        season = get_object_or_404(Season, pk=pk)
+        season.is_active = False
+        season.save(update_fields=["is_active"])
+        messages.success(request, f"“{season.name}” archived.")
+    return redirect("manage:seasons")

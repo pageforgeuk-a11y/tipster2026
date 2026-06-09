@@ -64,8 +64,11 @@ default, aggregation, tie-breaks).
 
 ## Organiser "Manage" area
 
-There's an on-brand `/manage/` area for organisers (a status dashboard plus the
-results-entry and reconcile screens), separate from the raw Django admin.
+There's an on-brand `/manage/` area for organisers, separate from the raw Django
+admin. It covers the whole routine workflow: a status dashboard, guided game-week
+setup (fixtures + questions), results entry + reconcile, and management lists for
+players (with merge), teams, the question bank, participants (incl. granting the
+Organiser role), and seasons (create / activate / archive).
 
 - **Access** = superuser **or** membership of the **"Organiser" group** (created
   automatically by migration `0005`). Grant access in Django admin → Users → add
