@@ -132,6 +132,35 @@ class ScoringServiceTests(TestCase):
         self.assertEqual(names[0], "A")
         self.assertEqual(board[0]["rank"], 1)
 
+    def test_breakdown_matches_cached_weeklyscore(self):
+        p = self._make_participant("alice")
+        entry = self._make_entry(p, [(2, 0), (1, 1)], total=4, tf=True, scorer="Smith")
+        self._set_results()
+        services.recompute_game_week(self.gw)
+        ws = WeeklyScore.objects.get(participant=p, game_week=self.gw)
+
+        bd = services.entry_breakdown(entry, self.gw)
+        # Per-section figures line up with the cached score.
+        self.assertEqual(bd["s1"], ws.s1)
+        self.assertEqual(bd["s2"]["points"], ws.s2)
+        self.assertEqual(bd["s3"], ws.s3)
+        self.assertEqual(bd["s4"], ws.s4)
+        self.assertEqual(bd["total"], ws.total)
+        # Per-fixture points are exposed.
+        self.assertEqual(len(bd["s1_rows"]), 2)
+        self.assertEqual(bd["s1_rows"][0]["points"], 8)  # exact 2-0 home win
+
+    def test_breakdown_section2_pending_until_all_results(self):
+        p = self._make_participant("bob")
+        entry = self._make_entry(p, [(0, 0), (0, 0)], total=4, tf=False)
+        # Only one fixture has a result.
+        self.f1.actual_home_score, self.f1.actual_away_score = 1, 1
+        self.f1.save()
+        bd = services.entry_breakdown(entry, self.gw)
+        self.assertFalse(bd["s2"]["results_complete"])
+        self.assertEqual(bd["s2"]["points"], 0)
+        self.assertIsNone(bd["s2"]["actual"])
+
     def test_rescore_is_deterministic_and_idempotent(self):
         p = self._make_participant("alice")
         self._make_entry(p, [(2, 0), (1, 1)], total=4, tf=True)

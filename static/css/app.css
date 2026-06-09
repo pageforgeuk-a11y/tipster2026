@@ -155,6 +155,9 @@ h2 { font-size: 1.2rem; font-weight: 700; margin: 1.5rem 0 .7rem; }
 .hero .btn:not(.btn-secondary) { background: #fff; color: var(--primary); box-shadow: 0 6px 20px rgba(0,0,0,.18); }
 .hero .btn:not(.btn-secondary):hover { background: #fff; filter: none; color: var(--primary-dark); }
 .hero-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .5rem; }
+/* Section chips inside the coloured hero: translucent so white text is legible. */
+.hero .section-score span { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.hero .section-score b { color: #fff; }
 
 /* Deadline countdown chip (coral, urgency). */
 .countdown {

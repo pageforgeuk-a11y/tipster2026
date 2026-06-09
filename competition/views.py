@@ -204,6 +204,7 @@ def my_entry(request, week_number):
     weekly_score = WeeklyScore.objects.filter(
         participant=participant, game_week=game_week
     ).first()
+    breakdown = services.entry_breakdown(entry_obj, game_week) if entry_obj else None
 
     return render(
         request,
@@ -212,6 +213,7 @@ def my_entry(request, week_number):
             "game_week": game_week,
             "entry": entry_obj,
             "weekly_score": weekly_score,
+            "breakdown": breakdown,
             "participant": participant,
         },
     )

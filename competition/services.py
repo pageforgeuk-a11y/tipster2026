@@ -68,6 +68,98 @@ def score_entry(
     return scoring.SectionScores(s1=s1, s2=s2, s3=s3, s4=s4)
 
 
+def entry_breakdown(entry: Entry, game_week: GameWeek) -> dict:
+    """Per-item points breakdown for the own-entry view.
+
+    Uses the same pure scoring functions as score_entry, so the figures match
+    the cached WeeklyScore, but laid out item-by-item for display.
+    """
+    fixtures = list(game_week.fixtures.all())
+    questions = list(game_week.questions.all())
+    goals_by_player_id, goals_by_name = _goals_for_week(game_week)
+
+    # Section 1 — per fixture.
+    preds = {mp.fixture_id: mp for mp in entry.match_predictions.all()}
+    s1_rows, s1 = [], 0
+    for f in fixtures:
+        mp = preds.get(f.id)
+        ph = mp.pred_home if mp else None
+        pa = mp.pred_away if mp else None
+        pts = scoring.score_fixture(ph, pa, f.actual_home_score, f.actual_away_score)
+        s1 += pts
+        s1_rows.append(
+            {
+                "fixture": f,
+                "pred_home": ph,
+                "pred_away": pa,
+                "has_result": f.has_result,
+                "points": pts,
+            }
+        )
+
+    # Section 2 — total goals.
+    tgp = getattr(entry, "total_goals_prediction", None)
+    predicted_total = tgp.predicted_total if tgp else None
+    results_complete = bool(fixtures) and all(f.has_result for f in fixtures)
+    actual_total = sum(
+        (f.actual_home_score or 0) + (f.actual_away_score or 0)
+        for f in fixtures
+        if f.has_result
+    )
+    s2 = scoring.score_section2(predicted_total, actual_total) if results_complete else 0
+    s2_info = {
+        "predicted": predicted_total,
+        "actual": actual_total if results_complete else None,
+        "points": s2,
+        "results_complete": results_complete,
+    }
+
+    # Section 3 — True/False, with the all-correct bonus surfaced.
+    answers = {a.question_id: a.answer for a in entry.tf_answers.all()}
+    q_rows, s3, correct_count, gradable = [], 0, 0, 0
+    for q in questions:
+        a = answers.get(q.id)
+        graded = q.correct_answer is not None
+        pts = 0
+        if graded:
+            gradable += 1
+            if a is not None and a == q.correct_answer:
+                pts = 2
+                correct_count += 1
+        s3 += pts
+        q_rows.append(
+            {"question": q, "answer": a, "correct": q.correct_answer, "points": pts}
+        )
+    bonus = 4 if (len(questions) == 8 and gradable == 8 and correct_count == 8) else 0
+    s3 += bonus
+
+    # Section 4 — scorer picks.
+    sp_rows, s4 = [], 0
+    for pick in entry.scorer_picks.all():
+        if pick.player_id and pick.player_id in goals_by_player_id:
+            goals = goals_by_player_id[pick.player_id]
+        elif pick.player_name:
+            goals = scoring._match_goals(pick.player_name, goals_by_name)
+        else:
+            goals = 0
+        pts = scoring.position_points(pick.position, goals)
+        s4 += pts
+        sp_rows.append({"pick": pick, "goals": goals, "points": pts})
+
+    return {
+        "s1_rows": s1_rows,
+        "s1": s1,
+        "s2": s2_info,
+        "q_rows": q_rows,
+        "s3": s3,
+        "s3_bonus": bonus,
+        "sp_rows": sp_rows,
+        "s4": s4,
+        "total": s1 + s2 + s3 + s4,
+        "has_any_result": any(f.has_result for f in fixtures),
+    }
+
+
 def _goals_for_week(game_week: GameWeek):
     """Aggregate goalscorer counts across the week, keyed by Player id and by name."""
     goals_by_name: dict[str, int] = {}

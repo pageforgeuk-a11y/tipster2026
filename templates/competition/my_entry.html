@@ -3,69 +3,99 @@
 {% block content %}
 <h1>My GW{{ game_week.week_number }} entry</h1>
 
-{% if weekly_score %}
-<div class="card">
-  <h2 style="margin-top:0;">Your score this week: {{ weekly_score.total }}</h2>
-  {% if weekly_score.is_non_entry_default %}
-    <p class="muted">You didn't submit — assigned the week's lowest score.</p>
-  {% else %}
-    <div class="section-score">
-      <span>S1 <b>{{ weekly_score.s1 }}</b></span>
-      <span>S2 <b>{{ weekly_score.s2 }}</b></span>
-      <span>S3 <b>{{ weekly_score.s3 }}</b></span>
-      <span>S4 <b>{{ weekly_score.s4 }}</b></span>
-    </div>
-  {% endif %}
-</div>
-{% endif %}
-
 {% if not entry %}
   <div class="card"><p class="muted">You didn't submit an entry for this week.</p></div>
+  <div class="btn-row"><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a></div>
 {% else %}
-  <h2>Match predictions</h2>
-  <div class="card">
-    {% for mp in entry.match_predictions.all %}
-      <div class="fixture">
-        <span class="team home">{{ mp.fixture.home_team }}</span>
-        <span class="score-pair">
-          <b>{{ mp.pred_home|default:"–" }}</b><span class="muted">–</span><b>{{ mp.pred_away|default:"–" }}</b>
-          {% if mp.fixture.has_result %}
-            <span class="muted">(was {{ mp.fixture.actual_home_score }}–{{ mp.fixture.actual_away_score }})</span>
-          {% endif %}
-        </span>
-        <span class="team away">{{ mp.fixture.away_team }}</span>
-      </div>
-    {% endfor %}
-  </div>
 
-  <h2>Total goals</h2>
-  <div class="card"><p>You predicted <b>{{ entry.total_goals_prediction.predicted_total|default:"–" }}</b></p></div>
-
-  <h2>True / False</h2>
-  <div class="card">
-    {% for a in entry.tf_answers.all %}
-      <div class="tf-row">
-        <span>{{ a.question.order }}. {{ a.question.text }}</span>
-        <span>
-          <b>{% if a.answer is True %}True{% elif a.answer is False %}False{% else %}–{% endif %}</b>
-          {% if a.question.correct_answer is not None %}
-            <span class="muted">(ans: {% if a.question.correct_answer %}True{% else %}False{% endif %})</span>
-          {% endif %}
-        </span>
-      </div>
-    {% endfor %}
+<div class="hero">
+  <div class="hero-head">
+    <div>
+      <h2>Your score: {{ breakdown.total }}</h2>
+      {% if game_week.status != 'finalised' %}
+        <p class="muted" style="margin:.3rem 0 0;">Provisional — updates as results are entered, final once the week is finalised.</p>
+      {% endif %}
+    </div>
   </div>
-
-  <h2>Scorer picks</h2>
-  <div class="card">
-    {% for p in entry.scorer_picks.all %}
-      <div class="tf-row">
-        <span>Pick {{ p.position }}</span>
-        <b>{% if p.player %}{{ p.player.label }}{% else %}{{ p.player_name|default:"–" }}{% endif %}</b>
-      </div>
-    {% endfor %}
+  <div class="section-score" style="margin-top:.6rem;">
+    <span style="color:#fff;">S1 <b style="color:#fff;">{{ breakdown.s1 }}</b></span>
+    <span style="color:#fff;">S2 <b style="color:#fff;">{{ breakdown.s2.points }}</b></span>
+    <span style="color:#fff;">S3 <b style="color:#fff;">{{ breakdown.s3 }}</b></span>
+    <span style="color:#fff;">S4 <b style="color:#fff;">{{ breakdown.s4 }}</b></span>
   </div>
-{% endif %}
+</div>
+
+<h2>1 · Match results &amp; scores</h2>
+<div class="card">
+  <table class="lb">
+    <thead><tr><th>Match</th><th class="num">You</th><th class="num">Result</th><th class="num">Pts</th></tr></thead>
+    <tbody>
+      {% for r in breakdown.s1_rows %}
+        <tr>
+          <td>{{ r.fixture.home_team }} v {{ r.fixture.away_team }}</td>
+          <td class="num">{{ r.pred_home|default:"–" }}–{{ r.pred_away|default:"–" }}</td>
+          <td class="num">{% if r.has_result %}{{ r.fixture.actual_home_score }}–{{ r.fixture.actual_away_score }}{% else %}–{% endif %}</td>
+          <td class="num"><b>{{ r.points }}</b></td>
+        </tr>
+      {% endfor %}
+      <tr><td colspan="3"><b>Section 1 total</b></td><td class="num"><b>{{ breakdown.s1 }}</b></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>2 · Total goals</h2>
+<div class="card">
+  <table class="lb">
+    <tbody>
+      <tr><td>Your prediction</td><td class="num"><b>{{ breakdown.s2.predicted|default:"–" }}</b></td></tr>
+      <tr><td>Actual total</td><td class="num">{% if breakdown.s2.results_complete %}{{ breakdown.s2.actual }}{% else %}<span class="muted">pending</span>{% endif %}</td></tr>
+      <tr><td><b>Points</b></td><td class="num"><b>{{ breakdown.s2.points }}</b></td></tr>
+    </tbody>
+  </table>
+  {% if not breakdown.s2.results_complete %}
+    <p class="muted">Section 2 only scores once <b>every</b> fixture has a result entered.</p>
+  {% endif %}
+</div>
+
+<h2>3 · True or False</h2>
+<div class="card">
+  <table class="lb">
+    <thead><tr><th>Question</th><th class="num">You</th><th class="num">Answer</th><th class="num">Pts</th></tr></thead>
+    <tbody>
+      {% for r in breakdown.q_rows %}
+        <tr>
+          <td>{{ r.question.order }}. {{ r.question.text }}</td>
+          <td class="num">{% if r.answer is True %}T{% elif r.answer is False %}F{% else %}–{% endif %}</td>
+          <td class="num">{% if r.correct is True %}T{% elif r.correct is False %}F{% else %}–{% endif %}</td>
+          <td class="num"><b>{{ r.points }}</b></td>
+        </tr>
+      {% endfor %}
+      {% if breakdown.s3_bonus %}
+        <tr><td colspan="3">🎉 All correct bonus</td><td class="num"><b>+{{ breakdown.s3_bonus }}</b></td></tr>
+      {% endif %}
+      <tr><td colspan="3"><b>Section 3 total</b></td><td class="num"><b>{{ breakdown.s3 }}</b></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>4 · Scorer picks</h2>
+<div class="card">
+  <table class="lb">
+    <thead><tr><th class="num">Pick</th><th>Player</th><th class="num">Goals</th><th class="num">Pts</th></tr></thead>
+    <tbody>
+      {% for r in breakdown.sp_rows %}
+        <tr>
+          <td class="num">{{ r.pick.position }}</td>
+          <td>{% if r.pick.player %}{{ r.pick.player.label }}{% else %}{{ r.pick.player_name|default:"–" }}{% endif %}</td>
+          <td class="num">{{ r.goals }}</td>
+          <td class="num"><b>{{ r.points }}</b></td>
+        </tr>
+      {% endfor %}
+      <tr><td colspan="3"><b>Section 4 total</b></td><td class="num"><b>{{ breakdown.s4 }}</b></td></tr>
+    </tbody>
+  </table>
+</div>
 
 <div class="btn-row"><a class="btn btn-secondary" href="{% url 'dashboard' %}">Back</a></div>
+{% endif %}
 {% endblock %}
