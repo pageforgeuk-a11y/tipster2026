@@ -332,6 +332,17 @@ tr.me .rank { color: var(--primary); }
 }
 .check-label input { accent-color: var(--primary); flex: 0 0 auto; }
 
+/* Entry progress counter */
+.progress {
+  position: sticky; top: 3.5rem; z-index: 5;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: .6rem .85rem; margin-bottom: 1rem; font-size: .9rem; font-weight: 600;
+  display: flex; gap: .85rem; flex-wrap: wrap; align-items: center;
+  box-shadow: var(--shadow-1);
+}
+.progress .ok { color: var(--success); }
+.progress .todo { color: var(--secondary); }
+
 /* Manage sub-nav */
 .manage-nav {
   display: flex; gap: .4rem; overflow-x: auto; padding-bottom: .4rem;

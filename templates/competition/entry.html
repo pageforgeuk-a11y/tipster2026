@@ -17,6 +17,8 @@
 <form method="post">
   {% csrf_token %}
 
+  <div class="progress" id="entry-progress" aria-live="polite"></div>
+
   <h2>1 · Match results &amp; scores</h2>
   <div class="card">
     {% for fixture, home_field, away_field in form.fixture_rows %}
@@ -91,6 +93,41 @@
     }
     tick();
     setInterval(tick, 30000);
+  })();
+
+  // Live "what's left to fill" counter.
+  (function () {
+    var box = document.getElementById('entry-progress');
+    if (!box) return;
+    var fixtures = Array.prototype.slice.call(document.querySelectorAll('.fixture'));
+    var totalGoals = document.querySelector('[name="total_goals"]');
+    var scorers = Array.prototype.slice.call(document.querySelectorAll('.scorer-input'));
+
+    function chip(label, ok, text) {
+      return '<span class="' + (ok ? 'ok' : 'todo') + '">' + label + ' ' + text + '</span>';
+    }
+    function update() {
+      var done = 0;
+      fixtures.forEach(function (fx) {
+        var ins = fx.querySelectorAll('.score-input');
+        if (ins.length === 2 && ins[0].value !== '' && ins[1].value !== '') done++;
+      });
+      var tgOk = totalGoals && totalGoals.value !== '';
+      var sc = scorers.filter(function (s) { return s.value.trim() !== ''; }).length;
+
+      var parts = [
+        chip('Scores', done === fixtures.length, done + '/' + fixtures.length),
+        chip('Total goals', tgOk, tgOk ? '✓' : 'to do'),
+        '<span class="' + (sc === 4 ? 'ok' : '') + '">Scorers ' + sc + '/4</span>'
+      ];
+      var left = (fixtures.length - done) + (tgOk ? 0 : 1);
+      var head = left === 0
+        ? '<b>All filled in 🎉</b> '
+        : '<b>' + left + ' still to fill</b> ';
+      box.innerHTML = head + parts.join(' · ');
+    }
+    document.addEventListener('input', update);
+    update();
   })();
 </script>
 {% endif %}
