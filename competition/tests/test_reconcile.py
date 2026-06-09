@@ -65,3 +65,32 @@ class ReconcileCreateTests(TestCase):
         )
         player = Player.objects.get(full_name__iexact="Watkins")
         self.assertEqual(player.club, "Aston Villa")
+
+    def test_admin_can_correct_the_name_before_creating(self):
+        # Entrant misspelled it; admin fixes the name box.
+        self.pick.player_name = "Wattkins"
+        self.pick.save()
+        self.client.post(
+            self._url(),
+            {
+                f"pick_{self.pick.id}": "new",
+                f"new_name_{self.pick.id}": "Ollie Watkins",
+                f"new_club_{self.pick.id}": "Aston Villa",
+            },
+            SERVER_NAME="localhost",
+        )
+        self.assertFalse(Player.objects.filter(full_name="Wattkins").exists())
+        player = Player.objects.get(full_name="Ollie Watkins")
+        self.pick.refresh_from_db()
+        self.assertEqual(self.pick.player_id, player.id)
+
+    def test_create_new_parses_name_dash_club_format(self):
+        self.pick.player_name = "Cole Palmer - Chelsea"
+        self.pick.save()
+        self.client.post(
+            self._url(),
+            {f"pick_{self.pick.id}": "new", f"new_name_{self.pick.id}": "Cole Palmer - Chelsea"},
+            SERVER_NAME="localhost",
+        )
+        player = Player.objects.get(full_name="Cole Palmer")
+        self.assertEqual(player.club, "Chelsea")

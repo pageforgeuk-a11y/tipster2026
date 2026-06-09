@@ -21,8 +21,11 @@ from .scoring import normalize_name as _norm
 
 
 def parse_label(raw: str):
-    """Split "Erling Haaland (Man City)" into ("Erling Haaland", "Man City").
+    """Split a typed scorer into (name, club_hint).
 
+    Handles both common formats people use:
+      "Erling Haaland (Man City)"  -> ("Erling Haaland", "Man City")
+      "Erling Haaland - Man City"  -> ("Erling Haaland", "Man City")
     A bare name returns (name, None). The club hint comes from the typeahead
     label or, on the results side, the fixture's teams.
     """
@@ -30,6 +33,11 @@ def parse_label(raw: str):
     if raw.endswith(")") and "(" in raw:
         i = raw.rfind("(")
         return raw[:i].strip(), raw[i + 1 : -1].strip()
+    # " - " (spaces around the dash) separates name from club; safe against
+    # hyphenated names like "Pierre-Emerick Aubameyang" (no surrounding spaces).
+    if " - " in raw:
+        name, club = raw.split(" - ", 1)
+        return name.strip(), club.strip()
     return raw, None
 
 

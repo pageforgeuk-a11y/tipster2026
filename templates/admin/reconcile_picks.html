@@ -6,8 +6,9 @@
   <p>
     These scorer picks couldn't be confidently matched to a known player (unknown
     name, or an ambiguous one like “Smith”). For each, either pick an existing
-    player, or choose <b>“➕ Create new”</b> to add the typed name as a new player
-    (optionally set a club to tell same-named players apart). Picks left on “leave
+    player, or choose <b>“➕ Create new player”</b> and edit the
+    <b>New player name</b> box (pre-filled with what the entrant typed — fix any
+    spelling or “name - club” there) plus an optional club. Picks left on “leave
     unresolved” fall back to tolerant name matching.
   </p>
 
@@ -18,7 +19,7 @@
   <form method="post">
     {% csrf_token %}
     <table>
-      <thead><tr><th>Team (entrant)</th><th>Typed</th><th>Map to</th><th>Club (for new)</th></tr></thead>
+      <thead><tr><th>Team (entrant)</th><th>Typed</th><th>Map to</th><th>New player name</th><th>Club (for new)</th></tr></thead>
       <tbody>
         {% for row in rows %}
           <tr>
@@ -27,7 +28,7 @@
             <td>
               <select name="pick_{{ row.pick.id }}">
                 <option value="">— leave unresolved —</option>
-                <option value="new">➕ Create new: “{{ row.pick.player_name }}”</option>
+                <option value="new">➕ Create new player →</option>
                 {% if row.suggestions %}
                   <optgroup label="Likely matches">
                     {% for p in row.suggestions %}<option value="{{ p.id }}">{{ p }}</option>{% endfor %}
@@ -38,6 +39,7 @@
                 </optgroup>
               </select>
             </td>
+            <td><input type="text" name="new_name_{{ row.pick.id }}" value="{{ row.pick.player_name }}" size="24"></td>
             <td><input type="text" name="new_club_{{ row.pick.id }}" placeholder="optional"></td>
           </tr>
         {% endfor %}

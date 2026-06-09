@@ -403,15 +403,21 @@ class GameWeekAdmin(admin.ModelAdmin):
                 if not raw:
                     continue
                 if raw == "new":
-                    # Create (or match) a Player from the typed text, optionally
-                    # with a club typed in the row's club box for disambiguation.
-                    name, club_from_text = player_resolution.parse_label(
-                        pick.player_name
+                    # Create (or match) a Player from the (editable) name box —
+                    # so the admin can fix typos / "name - club" before saving —
+                    # falling back to the typed text. Club comes from its own box
+                    # or is parsed from the name.
+                    typed = (
+                        request.POST.get(f"new_name_{pick.id}", "").strip()
+                        or pick.player_name
                     )
+                    name, club_from_text = player_resolution.parse_label(typed)
                     club = (
                         request.POST.get(f"new_club_{pick.id}", "").strip()
                         or club_from_text
                     )
+                    if not name:
+                        continue
                     before = Player.objects.count()
                     player = player_resolution.resolve_or_create(name, club=club)
                     if Player.objects.count() > before:
