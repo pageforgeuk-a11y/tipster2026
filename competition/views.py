@@ -70,6 +70,7 @@ def dashboard(request):
             "season": season,
             "open_week": open_week,
             "weeks": weeks,
+            "season_top": services.season_leaderboard(season.id)[:10],
         },
     )
 

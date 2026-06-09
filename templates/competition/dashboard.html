@@ -51,5 +51,28 @@
   </ul>
 </div>
 
+{% if season_top %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+  <h2 style="margin:0;">Season table</h2>
+  <a href="{% url 'season_leaderboard' %}">Full table →</a>
+</div>
+<div class="card">
+  <table class="lb">
+    <thead><tr><th class="rank">#</th><th>Team</th><th class="num">Avg</th><th class="num">Total</th></tr></thead>
+    <tbody>
+      {% for row in season_top %}
+        <tr class="{% if row.participant.id == participant.id %}me{% endif %}">
+          <td class="rank">{{ row.rank }}</td>
+          <td><a href="{% url 'season_team' row.participant.id %}">{{ row.participant.display_name }}</a></td>
+          <td class="num">{{ row.average }}</td>
+          <td class="num"><b>{{ row.score.total }}</b></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted" style="margin:.6rem 0 0;text-align:center;"><a href="{% url 'season_leaderboard' %}">See the full season table →</a></p>
+</div>
+{% endif %}
+
 <p class="muted" style="text-align:center;"><a href="{% url 'password_change' %}">Change password</a></p>
 {% endblock %}
