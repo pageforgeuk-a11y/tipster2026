@@ -1,9 +1,29 @@
 {% extends "admin/change_form.html" %}
 {% comment %}
-Adds a shared <datalist> of known team names so the fixture inline's free-text
-home/away inputs (which reference list="{{ team_datalist_id }}") offer
-autocomplete. Free text is still allowed — this only suggests.
+1. Adds top-right action buttons linking to the bespoke results-entry and
+   reconcile-picks screens (custom views, not registered models, so they need
+   an explicit link from the game week).
+2. Adds a shared <datalist> of known team names so the fixture inline's
+   free-text home/away inputs (list="{{ team_datalist_id }}") offer
+   autocomplete. Free text is still allowed — this only suggests.
 {% endcomment %}
+
+{% block object-tools-items %}
+  {% if original %}
+    <li>
+      <a href="{% url 'admin:competition_gameweek_results' original.pk %}" class="addlink">
+        Enter results
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin:competition_gameweek_reconcile' original.pk %}">
+        Reconcile picks
+      </a>
+    </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+
 {% block content %}
 {{ block.super }}
 <datalist id="{{ team_datalist_id }}">
