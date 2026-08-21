@@ -55,6 +55,21 @@ class ReconcileCreateTests(TestCase):
         self.assertEqual(self.pick.player_id, player.id)
         self.assertFalse(self.pick.needs_review)
 
+    def test_create_new_player_with_national_team(self):
+        resp = self.client.post(
+            self._url(),
+            {
+                f"pick_{self.pick.id}": "new",
+                f"new_natteam_{self.pick.id}": "England",
+            },
+            SERVER_NAME="localhost",
+        )
+        self.assertEqual(resp.status_code, 302)
+        player = Player.objects.get(full_name="Ollie Watkins")
+        self.assertEqual(player.national_team, "England")
+        self.pick.refresh_from_db()
+        self.assertEqual(self.pick.player_id, player.id)
+
     def test_create_new_uses_club_parsed_from_typed_text(self):
         self.pick.player_name = "Watkins (Aston Villa)"
         self.pick.save()

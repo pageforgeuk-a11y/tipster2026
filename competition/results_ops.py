@@ -167,10 +167,13 @@ def apply_reconcile(post, game_week: GameWeek) -> tuple[int, int]:
             typed = post.get(f"new_name_{pick.id}", "").strip() or pick.player_name
             name, club_from_text = player_resolution.parse_label(typed)
             club = post.get(f"new_club_{pick.id}", "").strip() or club_from_text
+            national_team = post.get(f"new_natteam_{pick.id}", "").strip()
             if not name:
                 continue
             before = Player.objects.count()
-            player = player_resolution.resolve_or_create(name, club=club)
+            player = player_resolution.resolve_or_create(
+                name, club=club, national_team=national_team
+            )
             if Player.objects.count() > before:
                 created += 1
         else:
