@@ -9,6 +9,8 @@
     <div>
       <h2>Game Week {{ open_week.week_number }}{% if open_week.title %} — {{ open_week.title }}{% endif %}</h2>
       <p class="muted" style="margin:.3rem 0 0;">Deadline: {{ open_week.deadline|date:"D j M, H:i" }} (UK)</p>
+      <p class="countdown" id="home-countdown" data-deadline="{{ open_week.deadline|date:'c' }}"
+         style="margin:.3rem 0 0;font-weight:600;display:none;"></p>
     </div>
     <span class="pill pill-open">Open</span>
   </div>
@@ -74,4 +76,31 @@
 {% endif %}
 
 <p class="muted" style="text-align:center;"><a href="{% url 'password_change' %}">Change password</a></p>
+
+<script>
+  // Home-page countdown: only surfaces when the open week's deadline is under a
+  // week away (mirrors the entry-sheet countdown).
+  (function () {
+    var el = document.getElementById('home-countdown');
+    if (!el) return;
+    var deadline = new Date(el.dataset.deadline).getTime();
+    var WEEK = 7 * 86400000;
+    function tick() {
+      var diff = deadline - Date.now();
+      if (diff <= 0) {
+        el.style.display = '';
+        el.textContent = '⏰ Deadline passed';
+        return;
+      }
+      if (diff > WEEK) { el.style.display = 'none'; return; }  // >7 days: hide
+      var d = Math.floor(diff / 86400000);
+      var h = Math.floor(diff % 86400000 / 3600000);
+      var m = Math.floor(diff % 3600000 / 60000);
+      el.style.display = '';
+      el.textContent = '⏰ Closes in ' + (d ? d + 'd ' : '') + h + 'h ' + m + 'm';
+    }
+    tick();
+    setInterval(tick, 30000);
+  })();
+</script>
 {% endblock %}
