@@ -162,16 +162,23 @@ def _scorer_label(pick) -> str:
     if not raw and pick.player is None:
         return ""
 
-    name, team = raw, ""
+    name, team, structured = raw, "", False
     if raw.endswith(")") and "(" in raw:
         name, _, tail = raw.partition("(")
         name, team = name.strip(), tail[:-1].strip()
+        structured = True
 
     player = pick.player
     if player is not None:
         name = (player.full_name or name).strip()
         team = (player.club or team).strip()
 
+    # Only reduce to a surname when the name is structured enough to trust it as
+    # "First Last" — a resolved Player, or "Name (Team)". Bare free text like
+    # "Smith Chelsea" is shown verbatim, because the last word there is likely the
+    # team, not a surname, and dropping the rest loses who they picked.
+    if player is None and not structured:
+        return name
     surname = name.split()[-1] if name.split() else name
     return f"{surname} ({team})" if team else surname
 

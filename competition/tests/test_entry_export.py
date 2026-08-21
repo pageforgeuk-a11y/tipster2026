@@ -190,6 +190,16 @@ class EntryExportTests(TestCase):
         form = EntryForm(data, fixtures=self.fixtures, questions=self.questions)
         self.assertTrue(form.is_valid(), form.errors)
 
+    def test_scorer_label_freetext_kept_whole(self):
+        entry = self._fill_entry()
+        pick = entry.scorer_picks.get(position=1)
+        # Free text with no "(Team)" and no resolved player: keep it whole rather
+        # than collapse to the last word (which is usually the team).
+        pick.player = None
+        pick.player_name = "Smith Chelsea"
+        pick.save()
+        self.assertEqual(entry_doc._scorer_label(pick), "Smith Chelsea")
+
     def test_scorer_label_uses_resolved_player(self):
         from competition.models import Player
 
