@@ -71,3 +71,22 @@ class ManageActionTests(TestCase):
         self.assertRedirects(resp, reverse("manage:dashboard"))
         self.gw.refresh_from_db()
         self.assertEqual(self.gw.status, GameWeek.Status.FINALISED)
+
+    def test_reconcile_link_shown_on_open_week_with_unresolved_pick(self):
+        # An open, pre-deadline week with a free-text (unresolved) pick must still
+        # offer a Reconcile link — you shouldn't have to lock the week to get to it.
+        from competition.models import Entry, Participant, ScorerPick
+
+        self.gw.status = GameWeek.Status.OPEN
+        self.gw.save(update_fields=["status"])
+        user = User.objects.create_user("p@x.com", "p@x.com", "pw")
+        part = Participant.objects.create(
+            user=user, season=self.season, display_name="Team P", join_week=1
+        )
+        entry = Entry.objects.create(
+            participant=part, game_week=self.gw, submitted_at=timezone.now()
+        )
+        ScorerPick.objects.create(entry=entry, position=1, player_name="Someone Unknown")
+
+        resp = self.client.get(reverse("manage:dashboard"), SERVER_NAME="localhost")
+        self.assertContains(resp, reverse("manage:reconcile", args=[self.gw.id]))

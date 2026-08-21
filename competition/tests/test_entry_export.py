@@ -141,6 +141,32 @@ class EntryExportTests(TestCase):
         self.assertEqual(short("Boston Rangers"), "Boston Rangers")
         self.assertEqual(short("Boston Rovers"), "Boston Rovers")
 
+    def test_duplicate_scorer_text_rejected(self):
+        from competition.forms import EntryForm
+
+        data = {"scorer_1": "Erling Haaland (Man City)", "scorer_2": "Erling Haaland (Man City)"}
+        form = EntryForm(data, fixtures=self.fixtures, questions=self.questions)
+        self.assertFalse(form.is_valid())
+        self.assertIn("scorer_2", form.errors)
+
+    def test_duplicate_scorer_by_resolved_identity_rejected(self):
+        from competition.forms import EntryForm
+        from competition.models import Player
+
+        Player.objects.create(full_name="Mohamed Salah", club="Liverpool")
+        # Same player expressed two ways -> resolves to one identity.
+        data = {"scorer_1": "Mohamed Salah (Liverpool)", "scorer_2": "Salah"}
+        form = EntryForm(data, fixtures=self.fixtures, questions=self.questions)
+        self.assertFalse(form.is_valid())
+        self.assertIn("scorer_2", form.errors)
+
+    def test_distinct_scorers_allowed(self):
+        from competition.forms import EntryForm
+
+        data = {"scorer_1": "Player A", "scorer_2": "Player B"}
+        form = EntryForm(data, fixtures=self.fixtures, questions=self.questions)
+        self.assertTrue(form.is_valid(), form.errors)
+
     def test_scorer_label_uses_resolved_player(self):
         from competition.models import Player
 

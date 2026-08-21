@@ -54,9 +54,12 @@
         </form>
       {% else %}
         <a class="btn" href="{% url 'manage:results' w.id %}">Enter results</a>
-        {% if w.unresolved_count %}
-          <a class="btn btn-secondary" href="{% url 'manage:reconcile' w.id %}">Reconcile ({{ w.unresolved_count }})</a>
-        {% endif %}
+      {% endif %}
+
+      {# Reconcile is available at any status — you may want to fix a free-text
+         pick without locking the week. #}
+      {% if w.unresolved_count %}
+        <a class="btn btn-secondary" href="{% url 'manage:reconcile' w.id %}">Reconcile ({{ w.unresolved_count }})</a>
       {% endif %}
 
       {% if w.status == 'finalised' %}

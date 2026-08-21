@@ -64,6 +64,7 @@
       <div class="field">
         <label for="{{ field.id_for_label }}">Pick {{ position }}</label>
         {{ field }}
+        {{ field.errors }}
       </div>
     {% endfor %}
     <datalist id="player-suggestions">

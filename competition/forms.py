@@ -188,3 +188,38 @@ class EntryForm(forms.Form):
         if raw == "false":
             return False
         return None
+
+    def clean(self):
+        """Reject the same player being picked in more than one scorer slot.
+
+        Compares on resolved Player identity where the typed text maps to a known
+        player (so "Salah" and "Mohamed Salah (Liverpool)" count as the same),
+        falling back to the normalised name for picks that don't resolve.
+        """
+        cleaned = super().clean()
+        from . import players as player_resolution
+        from .scoring import normalize_name
+
+        seen = {}
+        for position in range(1, 5):
+            field = f"scorer_{position}"
+            raw = (cleaned.get(field) or "").strip()
+            if not raw:
+                continue
+            player, _ = player_resolution.resolve_for_pick(raw)
+            if player is not None:
+                key = ("player", player.id)
+            else:
+                name, _club = player_resolution.parse_label(raw)
+                norm = normalize_name(name)
+                if not norm:
+                    continue
+                key = ("name", norm)
+            if key in seen:
+                self.add_error(
+                    field,
+                    "You've already picked this player — choose a different one.",
+                )
+            else:
+                seen[key] = field
+        return cleaned
