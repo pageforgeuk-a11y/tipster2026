@@ -84,8 +84,62 @@ def _bold(cell):
 
 
 def _first_word(name: str) -> str:
-    """Shorten a team to its first word ('Hull City' -> 'Hull')."""
+    """First word of a team name ('Hull City' -> 'Hull')."""
     return (name or "").split()[0] if (name or "").strip() else (name or "")
+
+
+# Clubs whose recognisable short form isn't the first word — nicknames (Aston
+# Villa -> Villa) or shared-prefix clubs that must keep enough to tell them apart
+# (Man City / Man Utd). Keyed by the full name, lowercased. Extend as needed.
+_TEAM_SHORT = {
+    "aston villa": "Villa",
+    "crystal palace": "Palace",
+    "nottingham forest": "Forest",
+    "notts forest": "Forest",
+    "manchester city": "Man City",
+    "man city": "Man City",
+    "manchester united": "Man Utd",
+    "man united": "Man Utd",
+    "man utd": "Man Utd",
+    "west ham": "West Ham",
+    "west ham united": "West Ham",
+    "west bromwich albion": "West Brom",
+    "west brom": "West Brom",
+    "sheffield united": "Sheff Utd",
+    "sheffield utd": "Sheff Utd",
+    "sheffield wednesday": "Sheff Wed",
+}
+
+
+def _short_candidate(name: str) -> str:
+    """Best short form for one team: explicit override, else first word."""
+    key = " ".join((name or "").split()).lower()
+    override = _TEAM_SHORT.get(key)
+    if override:
+        # Match the source's case so it sits consistently with the other teams.
+        return override.upper() if (name or "").isupper() else override
+    return _first_word(name)
+
+
+def _team_shortener(names):
+    """Return a function that shortens each team name, but falls back to the full
+    name when two distinct teams that week would produce the same short form (so
+    they never become indistinguishable on the sheet)."""
+    from collections import defaultdict
+
+    by_short = defaultdict(set)
+    for n in names:
+        by_short[_short_candidate(n).lower()].add((n or "").strip())
+
+    def short(name):
+        if not (name or "").strip():
+            return name or ""
+        candidate = _short_candidate(name)
+        if len(by_short[candidate.lower()]) > 1:
+            return name  # collision — keep the full name
+        return candidate
+
+    return short
 
 
 def _scorer_label(pick) -> str:
@@ -126,6 +180,18 @@ def _fixed_col_widths(table, widths_cm):
     for row in table.rows:
         for idx, w in enumerate(widths_cm):
             row.cells[idx].width = Cm(w)
+
+
+def _row_heights(table, cm, skip_header=True):
+    """Give rows a minimum height (cm) so the score boxes are easy to mark by
+    hand. AT_LEAST means the row still grows if the text needs more room."""
+    from docx.enum.table import WD_ROW_HEIGHT_RULE
+    from docx.shared import Cm
+
+    rows = table.rows[1:] if skip_header else table.rows
+    for r in rows:
+        r.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
+        r.height = Cm(cm)
 
 
 def _legend(doc, text):
@@ -179,8 +245,8 @@ def build_entry_docx(participant, game_week) -> bytes:
     normal.paragraph_format.space_after = Pt(0)
     normal.paragraph_format.line_spacing = 1.0
     for section in doc.sections:
-        section.top_margin = Cm(1.0)
-        section.bottom_margin = Cm(1.0)
+        section.top_margin = Cm(0.8)
+        section.bottom_margin = Cm(0.8)
         section.left_margin = Cm(1.3)
         section.right_margin = Cm(1.3)
 
@@ -200,6 +266,9 @@ def build_entry_docx(participant, game_week) -> bytes:
 
     # --- Section 1: match scores (Home | H | Away | A | Score) ----------------
     fixtures = list(game_week.fixtures.all())
+    short = _team_shortener(
+        [f.home_team for f in fixtures] + [f.away_team for f in fixtures]
+    )
     t1 = doc.add_table(rows=1, cols=5)
     t1.style = "Table Grid"
     for cell, text in zip(t1.rows[0].cells, ["Home", "", "Away", "", "Score"]):
@@ -211,12 +280,13 @@ def build_entry_docx(participant, game_week) -> bytes:
         h = "" if not mp or mp.pred_home is None else str(mp.pred_home)
         a = "" if not mp or mp.pred_away is None else str(mp.pred_away)
         cells = t1.add_row().cells
-        cells[0].text = _first_word(fixture.home_team)
+        cells[0].text = short(fixture.home_team)
         cells[1].text = h
-        cells[2].text = _first_word(fixture.away_team)
+        cells[2].text = short(fixture.away_team)
         cells[3].text = a
         cells[4].text = ""  # scoring box, left blank for marking
     _fixed_col_widths(t1, [5.0, 1.1, 5.0, 1.1, 1.6])
+    _row_heights(t1, 0.8)
     _legend(doc, _SECTION1_LEGEND)
 
     # --- Section 2: total goals ----------------------------------------------
@@ -228,6 +298,7 @@ def build_entry_docx(participant, game_week) -> bytes:
     )
     t2.rows[0].cells[1].text = ""  # score box
     _fixed_col_widths(t2, [1.6, 1.6])
+    _row_heights(t2, 0.8, skip_header=False)
     _legend(doc, _SECTION2_LEGEND)
 
     # --- Section 3: true / false ---------------------------------------------
@@ -247,6 +318,7 @@ def build_entry_docx(participant, game_week) -> bytes:
         cells[2].text = "X" if ans is False else ""
         cells[3].text = ""
     _fixed_col_widths(t3, [10.8, 1.3, 1.3, 1.6])
+    _row_heights(t3, 0.8)
     _legend(
         doc,
         "2pts for each correct answer and a bonus of 4pts if you get them all correct",
@@ -269,6 +341,7 @@ def build_entry_docx(participant, game_week) -> bytes:
         cells[1].text = _scorer_label(pick) if pick else ""
         cells[2].text = ""
     _fixed_col_widths(t4, [2.0, 10.9, 1.6])
+    _row_heights(t4, 0.8)
 
     # --- Grand total (blank box for marking) ---------------------------------
     _heading(doc, "")
@@ -279,6 +352,7 @@ def build_entry_docx(participant, game_week) -> bytes:
     _shade(gt.rows[0].cells[0], "D9D9D9")
     gt.rows[0].cells[1].text = ""
     _fixed_col_widths(gt, [3.6, 1.6])
+    _row_heights(gt, 0.8, skip_header=False)
 
     return _to_bytes(doc)
 

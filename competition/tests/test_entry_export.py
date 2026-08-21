@@ -124,6 +124,23 @@ class EntryExportTests(TestCase):
         self.assertIn("Haaland (Man City)", cells)  # surname + team
         self.assertIn("25", cells)  # total goals
 
+    def test_team_shortener(self):
+        short = entry_doc._team_shortener(
+            ["Hull City", "Everton", "Man City", "Man Utd", "Aston Villa", "Crystal Palace"]
+        )
+        self.assertEqual(short("Hull City"), "Hull")  # first word
+        self.assertEqual(short("Everton"), "Everton")
+        self.assertEqual(short("Aston Villa"), "Villa")  # nickname override
+        self.assertEqual(short("Crystal Palace"), "Palace")
+        self.assertEqual(short("Man City"), "Man City")  # kept distinct
+        self.assertEqual(short("Man Utd"), "Man Utd")
+
+    def test_team_shortener_collision_falls_back_to_full(self):
+        # Two clubs that share a first word and have no override stay full.
+        short = entry_doc._team_shortener(["Boston Rangers", "Boston Rovers"])
+        self.assertEqual(short("Boston Rangers"), "Boston Rangers")
+        self.assertEqual(short("Boston Rovers"), "Boston Rovers")
+
     def test_scorer_label_uses_resolved_player(self):
         from competition.models import Player
 
