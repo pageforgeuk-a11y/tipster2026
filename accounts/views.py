@@ -46,7 +46,9 @@ def register(request):
                     display_name=form.cleaned_data["team_name"],
                     join_week=_current_week_number(season),
                 )
-            login(request, user)
+            # User was just created (not via authenticate()), so name the backend
+            # explicitly — required once multiple AUTHENTICATION_BACKENDS exist.
+            login(request, user, backend="accounts.backends.EmailBackend")
             messages.success(request, "Welcome! Your account is ready.")
             return redirect("dashboard")
     else:

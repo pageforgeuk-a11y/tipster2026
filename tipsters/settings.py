@@ -151,6 +151,13 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Authenticate by email first (accounts are email-based; some usernames differ
+# from the email, e.g. superusers). ModelBackend stays as a username fallback.
+AUTHENTICATION_BACKENDS = [
+    "accounts.backends.EmailBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
@@ -193,7 +200,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "auto")  # auto | resend | console | smtp
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", "K.H.S.S.C. Tipsters <tipsters@pageforge.co.uk>"
+    "DEFAULT_FROM_EMAIL", "K.H.S.S.C. Tipsters <tipsters@mail.pageforge.co.uk>"
 )
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
