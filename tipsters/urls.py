@@ -79,6 +79,16 @@ urlpatterns = [
     path("week/<int:week_number>/entry/", comp_views.entry, name="entry"),
     path("week/<int:week_number>/my-entry/", comp_views.my_entry, name="my_entry"),
     path(
+        "week/<int:week_number>/entry.docx",
+        comp_views.download_entry,
+        name="download_entry",
+    ),
+    path(
+        "week/<int:week_number>/email-entry/",
+        comp_views.email_entry,
+        name="email_entry",
+    ),
+    path(
         "week/<int:week_number>/team/<int:participant_id>/",
         comp_views.team_entry,
         name="team_entry",

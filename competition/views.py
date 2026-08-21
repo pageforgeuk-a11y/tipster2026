@@ -11,8 +11,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from . import entry_doc
 from . import players as player_resolution
 from . import services
+from .emailing import send_email
 from .forms import EntryForm
 from .models import (
     Entry,
@@ -109,6 +111,9 @@ def entry(request, week_number):
         )
         form = EntryForm(initial=initial, fixtures=fixtures, questions=questions)
 
+    # Gate the download/email-my-entry buttons on a fully completed, saved entry.
+    _, missing = entry_doc.entry_completeness(participant, game_week)
+
     return render(
         request,
         "competition/entry.html",
@@ -119,6 +124,8 @@ def entry(request, week_number):
             "entry": entry_obj,
             "participant": participant,
             "player_suggestions": _player_suggestions(game_week),
+            "entry_complete": not missing,
+            "entry_missing": missing,
         },
     )
 
@@ -230,6 +237,88 @@ def my_entry(request, week_number):
     return _entry_detail(
         request, participant, participant, game_week, reverse("dashboard")
     )
+
+
+_DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+def _entry_doc_or_redirect(request, week_number):
+    """Shared guard for the download/email actions.
+
+    Returns (participant, game_week, entry) on success, or an HttpResponse to
+    return early (no season, missing week, or an incomplete/unsaved entry).
+    """
+    from django.http import HttpResponse  # local: only these two views need it
+
+    participant = _participant(request)
+    if participant is None:
+        return HttpResponse(render(request, "competition/no_season.html"))
+
+    game_week = get_object_or_404(
+        GameWeek, season=participant.season, week_number=week_number
+    )
+    entry, missing = entry_doc.entry_completeness(participant, game_week)
+    if missing:
+        messages.error(
+            request,
+            "Finish and save your entry first — still to do: " + ", ".join(missing) + ".",
+        )
+        return redirect("entry", week_number=week_number)
+    return participant, game_week, entry
+
+
+@login_required
+def download_entry(request, week_number):
+    """Download the player's completed entry as a Word (.docx) form."""
+    from django.http import HttpResponse
+
+    result = _entry_doc_or_redirect(request, week_number)
+    if not isinstance(result, tuple):
+        return result
+    participant, game_week, _ = result
+
+    data = entry_doc.build_entry_docx(participant, game_week)
+    filename = f"charity-tipster-week-{game_week.week_number}.docx"
+    response = HttpResponse(data, content_type=_DOCX_MIME)
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
+def email_entry(request, week_number):
+    """Email the completed entry (as a .docx attachment) to the player."""
+    if request.method != "POST":
+        return redirect("entry", week_number=week_number)
+
+    result = _entry_doc_or_redirect(request, week_number)
+    if not isinstance(result, tuple):
+        return result
+    participant, game_week, _ = result
+
+    to_email = request.user.email
+    if not to_email:
+        messages.error(request, "No email address on your account to send to.")
+        return redirect("entry", week_number=week_number)
+
+    data = entry_doc.build_entry_docx(participant, game_week)
+    filename = f"charity-tipster-week-{game_week.week_number}.docx"
+    ok = send_email(
+        to_email,
+        subject=f"Your Charity Tipster entry — Week {game_week.week_number}",
+        body=(
+            f"Hi {participant.display_name},\n\n"
+            f"Your predictions for Week {game_week.week_number} are attached as a "
+            f"Word document.\n\nGood luck!\nThe Charity Tipster"
+        ),
+        attachments=[
+            {"filename": filename, "content": data, "content_type": _DOCX_MIME}
+        ],
+    )
+    if ok:
+        messages.success(request, f"Your entry was emailed to {to_email}.")
+    else:
+        messages.error(request, "Sorry — sending the email failed. Please try again.")
+    return redirect("entry", week_number=week_number)
 
 
 @login_required

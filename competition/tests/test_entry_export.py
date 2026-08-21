@@ -1,0 +1,116 @@
+"""Download / email 'my entry' as a Word (.docx) form."""
+
+import io
+from datetime import timedelta
+
+from django.contrib.auth.models import User
+from django.core import mail
+from django.test import TestCase, override_settings
+from django.urls import reverse
+from django.utils import timezone
+
+from competition import entry_doc
+from competition.models import (
+    Entry,
+    Fixture,
+    GameWeek,
+    MatchPrediction,
+    Participant,
+    ScorerPick,
+    Season,
+    TotalGoalsPrediction,
+    TrueFalseAnswer,
+    TrueFalseQuestion,
+)
+
+
+class EntryExportTests(TestCase):
+    def setUp(self):
+        self.season = Season.objects.create(name="S", is_active=True)
+        self.user = User.objects.create_user("me@example.com", "me@example.com", "pw")
+        self.participant = Participant.objects.create(
+            user=self.user, season=self.season, display_name="Red Lion Rovers", join_week=1
+        )
+        self.gw = GameWeek.objects.create(
+            season=self.season,
+            week_number=1,
+            title="THE CHARITY TIPSTER",
+            date_range_label="Fri 21 Aug – Mon 24 Aug 2026",
+            deadline=timezone.now() + timedelta(days=1),
+            status=GameWeek.Status.OPEN,
+        )
+        self.fixtures = [
+            Fixture.objects.create(
+                game_week=self.gw, order=i, home_team=f"Home {i}", away_team=f"Away {i}"
+            )
+            for i in range(1, 11)
+        ]
+        self.questions = [
+            TrueFalseQuestion.objects.create(game_week=self.gw, order=i, text=f"Q{i}?")
+            for i in range(1, 9)
+        ]
+        self.client.force_login(self.user)
+
+    def _fill_entry(self, *, scorers=4):
+        entry = Entry.objects.create(
+            participant=self.participant, game_week=self.gw, submitted_at=timezone.now()
+        )
+        for i, fx in enumerate(self.fixtures):
+            MatchPrediction.objects.create(entry=entry, fixture=fx, pred_home=i % 4, pred_away=1)
+        TotalGoalsPrediction.objects.create(entry=entry, predicted_total=25)
+        for q in self.questions:
+            TrueFalseAnswer.objects.create(entry=entry, question=q, answer=(q.order % 2 == 0))
+        for pos in range(1, scorers + 1):
+            ScorerPick.objects.create(entry=entry, position=pos, player_name=f"Scorer {pos}")
+        return entry
+
+    def test_completeness_reports_missing(self):
+        _, missing = entry_doc.entry_completeness(self.participant, self.gw)
+        self.assertEqual(missing, ["Save your predictions first"])
+        self._fill_entry(scorers=2)
+        _, missing = entry_doc.entry_completeness(self.participant, self.gw)
+        self.assertEqual(missing, ["2 scorer pick(s)"])
+
+    def test_download_returns_docx(self):
+        self._fill_entry()
+        resp = self.client.get(
+            reverse("download_entry", args=[self.gw.week_number]), SERVER_NAME="localhost"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("wordprocessingml", resp["Content-Type"])
+        self.assertIn("attachment", resp["Content-Disposition"])
+        self.assertTrue(resp.content.startswith(b"PK"))  # .docx is a zip
+
+    def test_download_blocked_when_incomplete(self):
+        self._fill_entry(scorers=1)  # not all four scorers
+        resp = self.client.get(
+            reverse("download_entry", args=[self.gw.week_number]), SERVER_NAME="localhost"
+        )
+        self.assertRedirects(resp, reverse("entry", args=[self.gw.week_number]))
+
+    @override_settings(EMAIL_PROVIDER="console")
+    def test_email_sends_with_attachment(self):
+        self._fill_entry()
+        resp = self.client.post(
+            reverse("email_entry", args=[self.gw.week_number]), SERVER_NAME="localhost"
+        )
+        self.assertRedirects(resp, reverse("entry", args=[self.gw.week_number]))
+        self.assertEqual(len(mail.outbox), 1)
+        msg = mail.outbox[0]
+        self.assertEqual(msg.to, ["me@example.com"])
+        self.assertEqual(len(msg.attachments), 1)
+        self.assertTrue(msg.attachments[0][0].endswith(".docx"))
+
+    def test_docx_contains_predictions(self):
+        self._fill_entry()
+        from docx import Document
+
+        data = entry_doc.build_entry_docx(self.participant, self.gw)
+        doc = Document(io.BytesIO(data))
+        text = "\n".join(p.text for p in doc.paragraphs)
+        cells = " ".join(c.text for t in doc.tables for row in t.rows for c in row.cells)
+        self.assertIn("Week 1", text)
+        self.assertIn("Red Lion Rovers", text)  # name
+        self.assertIn("Home 1", cells)  # a fixture
+        self.assertIn("Scorer 1", cells)  # a pick
+        self.assertIn("25", cells)  # total goals

@@ -131,4 +131,28 @@
   })();
 </script>
 {% endif %}
+
+<h2>Paper copy</h2>
+<div class="card">
+  <p class="muted">Download or email your entry as a Word form (the offline sheet)
+    once every prediction is filled in and saved.</p>
+  {% if entry_complete %}
+    <div class="btn-row">
+      <a class="btn" href="{% url 'download_entry' game_week.week_number %}">Download my entry</a>
+      <form method="post" action="{% url 'email_entry' game_week.week_number %}" style="margin:0;display:inline;">
+        {% csrf_token %}
+        <button class="btn btn-secondary" type="submit">Email my entry to me</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="btn-row">
+      <button class="btn" type="button" disabled>Download my entry</button>
+      <button class="btn btn-secondary" type="button" disabled>Email my entry to me</button>
+    </div>
+    <p class="muted" style="margin-top:.6rem;">
+      Still to do before you can export:
+      {% for item in entry_missing %}{{ item }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+    </p>
+  {% endif %}
+</div>
 {% endblock %}
