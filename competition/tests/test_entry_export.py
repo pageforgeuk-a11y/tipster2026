@@ -103,14 +103,34 @@ class EntryExportTests(TestCase):
 
     def test_docx_contains_predictions(self):
         self._fill_entry()
+        # Realistic values to exercise team-name shortening + scorer formatting.
+        fx = self.fixtures[0]
+        fx.home_team, fx.away_team = "Hull City", "Manchester United"
+        fx.save()
+        pick = ScorerPick.objects.get(entry__participant=self.participant, position=1)
+        pick.player_name = "Erling Haaland (Man City)"
+        pick.save()
+
         from docx import Document
 
         data = entry_doc.build_entry_docx(self.participant, self.gw)
         doc = Document(io.BytesIO(data))
         text = "\n".join(p.text for p in doc.paragraphs)
         cells = " ".join(c.text for t in doc.tables for row in t.rows for c in row.cells)
-        self.assertIn("Week 1", text)
-        self.assertIn("Red Lion Rovers", text)  # name
-        self.assertIn("Home 1", cells)  # a fixture
-        self.assertIn("Scorer 1", cells)  # a pick
+        self.assertIn("Week 1", text)  # header
+        self.assertIn("Red Lion Rovers", text)  # team name in header
+        self.assertIn("Hull", cells)  # shortened to first word
+        self.assertNotIn("Hull City", cells)
+        self.assertIn("Haaland (Man City)", cells)  # surname + team
         self.assertIn("25", cells)  # total goals
+
+    def test_scorer_label_uses_resolved_player(self):
+        from competition.models import Player
+
+        player = Player.objects.create(full_name="Bukayo Saka", club="Arsenal")
+        entry = self._fill_entry()
+        pick = entry.scorer_picks.get(position=1)
+        pick.player = player
+        pick.player_name = "saka"  # raw typed text, no team
+        pick.save()
+        self.assertEqual(entry_doc._scorer_label(pick), "Saka (Arsenal)")
