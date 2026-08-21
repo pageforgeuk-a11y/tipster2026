@@ -278,7 +278,7 @@ def download_entry(request, week_number):
     participant, game_week, _ = result
 
     data = entry_doc.build_entry_docx(participant, game_week)
-    filename = f"charity-tipster-week-{game_week.week_number}.docx"
+    filename = entry_doc.entry_filename(participant, game_week)
     response = HttpResponse(data, content_type=_DOCX_MIME)
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
@@ -301,7 +301,7 @@ def email_entry(request, week_number):
         return redirect("entry", week_number=week_number)
 
     data = entry_doc.build_entry_docx(participant, game_week)
-    filename = f"charity-tipster-week-{game_week.week_number}.docx"
+    filename = entry_doc.entry_filename(participant, game_week)
     ok = send_email(
         to_email,
         subject=f"Your Charity Tipster entry — Week {game_week.week_number}",

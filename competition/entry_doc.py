@@ -29,6 +29,16 @@ _SECTION2_LEGEND = (
 _SECTION4_POINTS = {1: "4 Points", 2: "3 Points", 3: "2 Points", 4: "1 Point"}
 
 
+def entry_filename(participant, game_week) -> str:
+    """Download/attachment name: 'Tipsters WK3 - Team Name.docx'."""
+    import re
+
+    # Drop characters that are illegal in filenames / awkward in headers.
+    safe_team = re.sub(r'[\\/:*?"<>|]+', "", participant.display_name or "").strip()
+    safe_team = re.sub(r"\s+", " ", safe_team) or "Entry"
+    return f"Tipsters WK{game_week.week_number} - {safe_team}.docx"
+
+
 def entry_completeness(participant, game_week):
     """Return (entry, missing) where `missing` is a list of human labels.
 

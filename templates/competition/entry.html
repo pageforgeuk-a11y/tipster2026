@@ -14,7 +14,7 @@
 {% if not editable %}
   <div class="card"><p>This entry is locked. <a href="{% url 'my_entry' game_week.week_number %}">View your entry</a>.</p></div>
 {% else %}
-<form method="post">
+<form method="post" id="entry-form">
   {% csrf_token %}
 
   <div class="progress" id="entry-progress" aria-live="polite"></div>
@@ -129,6 +129,22 @@
     }
     document.addEventListener('input', update);
     update();
+  })();
+
+  // Warn before leaving with unsaved changes. Fires only once the form is
+  // "dirty" and not when the user is deliberately submitting (Save, or the
+  // email-my-entry form).
+  (function () {
+    var form = document.getElementById('entry-form');
+    if (!form) return;
+    var dirty = false, leaving = false;
+    function markDirty() { dirty = true; }
+    form.addEventListener('input', markDirty);
+    form.addEventListener('change', markDirty);
+    document.addEventListener('submit', function () { leaving = true; });
+    window.addEventListener('beforeunload', function (e) {
+      if (dirty && !leaving) { e.preventDefault(); e.returnValue = ''; }
+    });
   })();
 </script>
 {% endif %}

@@ -79,7 +79,19 @@ class EntryExportTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("wordprocessingml", resp["Content-Type"])
         self.assertIn("attachment", resp["Content-Disposition"])
+        self.assertIn('"Tipsters WK1 - Red Lion Rovers.docx"', resp["Content-Disposition"])
         self.assertTrue(resp.content.startswith(b"PK"))  # .docx is a zip
+
+    def test_entry_filename_format_and_sanitising(self):
+        self.assertEqual(
+            entry_doc.entry_filename(self.participant, self.gw),
+            "Tipsters WK1 - Red Lion Rovers.docx",
+        )
+        self.participant.display_name = 'A/B:C team'  # illegal filename chars
+        self.assertEqual(
+            entry_doc.entry_filename(self.participant, self.gw),
+            "Tipsters WK1 - ABC team.docx",
+        )
 
     def test_download_blocked_when_incomplete(self):
         self._fill_entry(scorers=1)  # not all four scorers
