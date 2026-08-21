@@ -245,8 +245,8 @@ def build_entry_docx(participant, game_week) -> bytes:
     normal.paragraph_format.space_after = Pt(0)
     normal.paragraph_format.line_spacing = 1.0
     for section in doc.sections:
-        section.top_margin = Cm(0.8)
-        section.bottom_margin = Cm(0.8)
+        section.top_margin = Cm(1.0)
+        section.bottom_margin = Cm(1.0)
         section.left_margin = Cm(1.3)
         section.right_margin = Cm(1.3)
 
@@ -286,7 +286,7 @@ def build_entry_docx(participant, game_week) -> bytes:
         cells[3].text = a
         cells[4].text = ""  # scoring box, left blank for marking
     _fixed_col_widths(t1, [5.0, 1.1, 5.0, 1.1, 1.6])
-    _row_heights(t1, 0.8)
+    _row_heights(t1, 0.65)
     _legend(doc, _SECTION1_LEGEND)
 
     # --- Section 2: total goals ----------------------------------------------
@@ -298,7 +298,7 @@ def build_entry_docx(participant, game_week) -> bytes:
     )
     t2.rows[0].cells[1].text = ""  # score box
     _fixed_col_widths(t2, [1.6, 1.6])
-    _row_heights(t2, 0.8, skip_header=False)
+    _row_heights(t2, 0.65, skip_header=False)
     _legend(doc, _SECTION2_LEGEND)
 
     # --- Section 3: true / false ---------------------------------------------
@@ -318,7 +318,7 @@ def build_entry_docx(participant, game_week) -> bytes:
         cells[2].text = "X" if ans is False else ""
         cells[3].text = ""
     _fixed_col_widths(t3, [10.8, 1.3, 1.3, 1.6])
-    _row_heights(t3, 0.8)
+    _row_heights(t3, 0.65)
     _legend(
         doc,
         "2pts for each correct answer and a bonus of 4pts if you get them all correct",
@@ -341,7 +341,7 @@ def build_entry_docx(participant, game_week) -> bytes:
         cells[1].text = _scorer_label(pick) if pick else ""
         cells[2].text = ""
     _fixed_col_widths(t4, [2.0, 10.9, 1.6])
-    _row_heights(t4, 0.8)
+    _row_heights(t4, 0.65)
 
     # --- Grand total (blank box for marking) ---------------------------------
     _heading(doc, "")
@@ -352,7 +352,7 @@ def build_entry_docx(participant, game_week) -> bytes:
     _shade(gt.rows[0].cells[0], "D9D9D9")
     gt.rows[0].cells[1].text = ""
     _fixed_col_widths(gt, [3.6, 1.6])
-    _row_heights(gt, 0.8, skip_header=False)
+    _row_heights(gt, 0.65, skip_header=False)
 
     return _to_bytes(doc)
 
