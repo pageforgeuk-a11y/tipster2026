@@ -354,6 +354,14 @@ def build_entry_docx(participant, game_week) -> bytes:
     _fixed_col_widths(gt, [3.6, 1.6])
     _row_heights(gt, 0.65, skip_header=False)
 
+    # End on a tiny paragraph rather than a table, so Word doesn't append its own
+    # full-height empty paragraph (which can spill onto a blank second page).
+    tail = doc.add_paragraph()
+    tail.paragraph_format.space_before = Pt(0)
+    tail.paragraph_format.space_after = Pt(0)
+    tail.paragraph_format.line_spacing = 1.0
+    tail.add_run("").font.size = Pt(1)
+
     return _to_bytes(doc)
 
 
