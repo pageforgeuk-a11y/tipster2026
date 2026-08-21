@@ -587,10 +587,20 @@ def participant_edit(request, pk):
 
 @organiser_required
 def seasons(request):
+    active = Season.objects.filter(is_active=True).first()
+    # Players are 1:1 with a season; on a fresh season they sit in the previous
+    # one until carried over. Surface how many can be carried into the active one.
+    carryover_count = (
+        Participant.objects.exclude(season=active).count() if active else 0
+    )
     return render(
         request,
         "competition/manage/seasons.html",
-        {"seasons": Season.objects.all()},
+        {
+            "seasons": Season.objects.all(),
+            "active_season": active,
+            "carryover_count": carryover_count,
+        },
     )
 
 
@@ -605,6 +615,33 @@ def season_edit(request, pk):
     return _modelform(
         request, SeasonForm, season, f"Edit {season.name}", reverse("manage:seasons")
     )
+
+
+@organiser_required
+def season_carry(request, pk):
+    """Carry every player not already in this season into it, at week 1.
+
+    Participants are 1:1 with a User (one season each), so this re-points them
+    rather than duplicating — the roster moves to the new season and resets to
+    week 1. Only ever carries INTO the active season, as a safety rail.
+    """
+    if request.method == "POST":
+        season = get_object_or_404(Season, pk=pk)
+        if not season.is_active:
+            messages.error(request, "Only the active season can receive players.")
+        else:
+            moved = Participant.objects.exclude(season=season).update(
+                season=season, join_week=1
+            )
+            if moved:
+                messages.success(
+                    request,
+                    f"Carried {moved} player{'s' if moved != 1 else ''} into "
+                    f"“{season.name}” at week 1.",
+                )
+            else:
+                messages.info(request, "No players to carry over.")
+    return redirect("manage:seasons")
 
 
 @organiser_required

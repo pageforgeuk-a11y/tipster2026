@@ -99,3 +99,35 @@ class SeasonManageTests(TestCase):
         new.refresh_from_db()
         self.assertTrue(new.is_active)
         self.assertFalse(old.is_active)  # only one active at a time
+
+    def test_carry_participants_into_active_season(self):
+        old = Season.objects.create(name="Old", is_active=False)
+        new = Season.objects.create(name="New", is_active=True)
+        user = User.objects.create_user("p@x.com", "p@x.com", "pw")
+        part = Participant.objects.create(
+            user=user, season=old, display_name="Team P", join_week=3
+        )
+        # Banner should advertise one carryable player.
+        resp = self.client.get(reverse("manage:seasons"), SERVER_NAME="localhost")
+        self.assertEqual(resp.context["carryover_count"], 1)
+
+        resp = self.client.post(
+            reverse("manage:season_carry", args=[new.id]), SERVER_NAME="localhost"
+        )
+        self.assertRedirects(resp, reverse("manage:seasons"))
+        part.refresh_from_db()
+        self.assertEqual(part.season_id, new.id)  # re-pointed to active season
+        self.assertEqual(part.join_week, 1)  # reset to week 1
+
+    def test_carry_only_into_active_season(self):
+        active = Season.objects.create(name="Active", is_active=True)
+        inactive = Season.objects.create(name="Inactive", is_active=False)
+        user = User.objects.create_user("q@x.com", "q@x.com", "pw")
+        Participant.objects.create(
+            user=user, season=active, display_name="Team Q", join_week=1
+        )
+        # Carrying into a non-active season is refused; nobody moves.
+        self.client.post(
+            reverse("manage:season_carry", args=[inactive.id]), SERVER_NAME="localhost"
+        )
+        self.assertEqual(inactive.participants.count(), 0)

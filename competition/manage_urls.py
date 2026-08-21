@@ -37,5 +37,6 @@ urlpatterns = [
     path("seasons/new/", manage_views.season_new, name="season_new"),
     path("seasons/<int:pk>/", manage_views.season_edit, name="season_edit"),
     path("seasons/<int:pk>/activate/", manage_views.season_activate, name="season_activate"),
+    path("seasons/<int:pk>/carry/", manage_views.season_carry, name="season_carry"),
     path("seasons/<int:pk>/archive/", manage_views.season_archive, name="season_archive"),
 ]
