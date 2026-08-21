@@ -4,6 +4,7 @@ Deadline locking is enforced server-side at submission time (spec §9). Players
 never see other players' predictions (spec §6.5).
 """
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -295,27 +296,38 @@ def email_entry(request, week_number):
         return result
     participant, game_week, _ = result
 
-    to_email = request.user.email
+    to_email = settings.ORGANISER_EMAIL
     if not to_email:
-        messages.error(request, "No email address on your account to send to.")
+        messages.error(request, "No organiser email is configured to send to.")
         return redirect("entry", week_number=week_number)
 
+    team = participant.display_name
     data = entry_doc.build_entry_docx(participant, game_week)
     filename = entry_doc.entry_filename(participant, game_week)
+
+    # Send it "from" the player's name (address stays on the verified domain) and
+    # set Reply-To to their email, so the organiser can just hit reply.
+    from email.utils import formataddr, parseaddr
+
+    player_name = f"{request.user.first_name} {request.user.last_name}".strip() or team
+    sender_addr = parseaddr(settings.DEFAULT_FROM_EMAIL)[1]
+    from_email = formataddr((player_name, sender_addr))
+
     ok = send_email(
         to_email,
-        subject=f"Your Charity Tipster entry — Week {game_week.week_number}",
+        subject=f"WK{game_week.week_number} Entry {team}",
         body=(
-            f"Hi {participant.display_name},\n\n"
-            f"Your predictions for Week {game_week.week_number} are attached as a "
-            f"Word document.\n\nGood luck!\nThe Charity Tipster"
+            f"Hi Neil,\n\n"
+            f"See attached tipster entry for {team} Week {game_week.week_number}.\n"
         ),
         attachments=[
             {"filename": filename, "content": data, "content_type": _DOCX_MIME}
         ],
+        from_email=from_email,
+        reply_to=request.user.email or None,
     )
     if ok:
-        messages.success(request, f"Your entry was emailed to {to_email}.")
+        messages.success(request, "Your entry was emailed to the organiser.")
     else:
         messages.error(request, "Sorry — sending the email failed. Please try again.")
     return redirect("entry", week_number=week_number)

@@ -31,31 +31,39 @@ def send_email(
     body: str,
     html: str | None = None,
     attachments: list[dict] | None = None,
+    from_email: str | None = None,
+    reply_to: str | list[str] | None = None,
 ) -> bool:
     """Send one email. Returns True on success, False on failure (never raises).
 
     `attachments` is a list of {"filename", "content" (bytes), "content_type"}.
+    `from_email` overrides the default sender (address must stay on the verified
+    domain; only the display name should vary). `reply_to` sets Reply-To.
     """
     recipients = [to] if isinstance(to, str) else list(to)
     if not recipients:
         return False
+    reply = [reply_to] if isinstance(reply_to, str) else (list(reply_to) if reply_to else None)
 
     if _use_resend():
-        return _send_via_resend(recipients, subject, body, html, attachments)
-    return _send_via_django(recipients, subject, body, html, attachments)
+        return _send_via_resend(recipients, subject, body, html, attachments, from_email, reply)
+    return _send_via_django(recipients, subject, body, html, attachments, from_email, reply)
 
 
-def _send_via_resend(recipients, subject, body, html, attachments=None) -> bool:
+def _send_via_resend(
+    recipients, subject, body, html, attachments=None, from_email=None, reply_to=None
+) -> bool:
     try:
         import resend
 
         resend.api_key = settings.RESEND_API_KEY
         payload = {
-            "from": settings.DEFAULT_FROM_EMAIL,
+            "from": from_email or settings.DEFAULT_FROM_EMAIL,
             "to": recipients,
             "subject": subject,
             "text": body,
             **({"html": html} if html else {}),
+            **({"reply_to": reply_to} if reply_to else {}),
         }
         if attachments:
             # Resend expects the raw bytes as a list of ints (see its Attachment type).
@@ -74,12 +82,18 @@ def _send_via_resend(recipients, subject, body, html, attachments=None) -> bool:
         return False
 
 
-def _send_via_django(recipients, subject, body, html, attachments=None) -> bool:
+def _send_via_django(
+    recipients, subject, body, html, attachments=None, from_email=None, reply_to=None
+) -> bool:
     try:
         from django.core.mail import EmailMultiAlternatives
 
         msg = EmailMultiAlternatives(
-            subject, body, settings.DEFAULT_FROM_EMAIL, recipients
+            subject,
+            body,
+            from_email or settings.DEFAULT_FROM_EMAIL,
+            recipients,
+            reply_to=reply_to or None,
         )
         if html:
             msg.attach_alternative(html, "text/html")

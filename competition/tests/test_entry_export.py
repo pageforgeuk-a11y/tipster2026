@@ -100,8 +100,14 @@ class EntryExportTests(TestCase):
         )
         self.assertRedirects(resp, reverse("entry", args=[self.gw.week_number]))
 
-    @override_settings(EMAIL_PROVIDER="console")
-    def test_email_sends_with_attachment(self):
+    @override_settings(
+        EMAIL_PROVIDER="console",
+        ORGANISER_EMAIL="neil@example.org",
+        DEFAULT_FROM_EMAIL="Tipsters <tipsters@mail.pageforge.co.uk>",
+    )
+    def test_email_sends_to_organiser_with_attachment(self):
+        self.user.first_name, self.user.last_name = "John", "Smith"
+        self.user.save()
         self._fill_entry()
         resp = self.client.post(
             reverse("email_entry", args=[self.gw.week_number]), SERVER_NAME="localhost"
@@ -109,9 +115,14 @@ class EntryExportTests(TestCase):
         self.assertRedirects(resp, reverse("entry", args=[self.gw.week_number]))
         self.assertEqual(len(mail.outbox), 1)
         msg = mail.outbox[0]
-        self.assertEqual(msg.to, ["me@example.com"])
-        self.assertEqual(len(msg.attachments), 1)
-        self.assertTrue(msg.attachments[0][0].endswith(".docx"))
+        self.assertEqual(msg.to, ["neil@example.org"])  # organiser, not the player
+        self.assertEqual(msg.subject, "WK1 Entry Red Lion Rovers")
+        self.assertIn("Hi Neil", msg.body)
+        self.assertIn("Red Lion Rovers Week 1", msg.body)
+        # From shows the player's name, address stays on the verified domain.
+        self.assertEqual(msg.from_email, "John Smith <tipsters@mail.pageforge.co.uk>")
+        self.assertEqual(msg.reply_to, ["me@example.com"])  # reply goes to the player
+        self.assertEqual(msg.attachments[0][0], "Tipsters WK1 - Red Lion Rovers.docx")
 
     def test_docx_contains_predictions(self):
         self._fill_entry()

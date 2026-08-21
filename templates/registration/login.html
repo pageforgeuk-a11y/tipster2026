@@ -20,5 +20,10 @@
   </form>
 </div>
 <p class="muted"><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
-<p class="muted">No account yet? <a href="{% url 'register' %}">Register here</a>.</p>
+
+<div class="card" style="text-align:center;margin-top:1rem;">
+  <p style="margin:0 0 .7rem;font-weight:600;">New player? Join the competition</p>
+  <a class="btn" href="{% url 'register' %}"
+     style="width:auto;padding:.7rem 1.4rem;display:inline-block;">Create an account →</a>
+</div>
 {% endblock %}

@@ -204,6 +204,9 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 )
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
+# Where "Email my entry" sends the player's completed sheet (the organiser).
+ORGANISER_EMAIL = os.environ.get("ORGANISER_EMAIL", "neil@savingenergy.org.uk")
+
 # Standard SMTP fallback config (only used when EMAIL_PROVIDER=smtp).
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))

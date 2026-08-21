@@ -158,7 +158,7 @@
       <a class="btn" href="{% url 'download_entry' game_week.week_number %}">Download my entry</a>
       <form method="post" action="{% url 'email_entry' game_week.week_number %}" style="margin:0;display:inline;">
         {% csrf_token %}
-        <button class="btn btn-secondary" type="submit">Email my entry to me</button>
+        <button class="btn btn-secondary" type="submit">Email my entry to the organiser</button>
       </form>
     </div>
   {% else %}
