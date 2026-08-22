@@ -36,7 +36,7 @@
           {% if w.unresolved_count %} · <span style="color:var(--secondary);">{{ w.unresolved_count }} to reconcile</span>{% endif %}
         </div>
       </div>
-      <span class="pill pill-{{ w.status }}">{{ w.get_status_display }}</span>
+      <span class="pill pill-{{ w.display_status.pill }}">{{ w.display_status.label }}</span>
     </div>
 
     <div class="btn-row" style="margin-top:.7rem;">

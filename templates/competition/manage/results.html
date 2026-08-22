@@ -2,7 +2,7 @@
 {% block title %}Results — GW{{ game_week.week_number }}{% endblock %}
 {% block content %}
 <h1>Enter results — GW{{ game_week.week_number }}</h1>
-<p class="muted">Deadline {{ game_week.deadline|date:"D j M, H:i" }} · <span class="pill pill-{{ game_week.status }}">{{ game_week.get_status_display }}</span></p>
+<p class="muted">Deadline {{ game_week.deadline|date:"D j M, H:i" }} · <span class="pill pill-{{ game_week.display_status.pill }}">{{ game_week.display_status.label }}</span></p>
 
 {% if unresolved_count %}
   <div class="msg msg-warning">

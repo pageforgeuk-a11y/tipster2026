@@ -10,7 +10,7 @@
       <p class="muted" style="margin:0 0 .2rem;text-transform:uppercase;letter-spacing:.05em;font-size:.8rem;">Latest results</p>
       <h2 style="margin:0;">Game Week {{ results_week.week_number }}{% if results_week.title %} — {{ results_week.title }}{% endif %}</h2>
     </div>
-    <span class="pill pill-{{ results_week.status }}">{{ results_week.get_status_display }}</span>
+    <span class="pill pill-{{ results_week.display_status.pill }}">{{ results_week.display_status.label }}</span>
   </div>
   <div class="btn-row">
     <a class="btn" href="{% url 'weekly_leaderboard' results_week.week_number %}">See the weekly table →</a>
@@ -48,7 +48,7 @@
         <div>
           <b>GW{{ w.week_number }}</b>
           {% if w.title %}<span class="muted"> — {{ w.title }}</span>{% endif %}
-          <span class="pill pill-{{ w.status }}">{{ w.get_status_display }}</span>
+          <span class="pill pill-{{ w.display_status.pill }}">{{ w.display_status.label }}</span>
         </div>
         <div class="wk-actions">
           {% if w.status == 'open' and not w.is_past_deadline %}

@@ -5,9 +5,15 @@ re-runnable function of (results, entry). Computed scores are cached in
 WeeklyScore / SeasonScore and recomputed on results change.
 """
 
+from collections import namedtuple
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.functional import cached_property
+
+# (label, pill) for the status shown to players — see GameWeek.display_status.
+DisplayStatus = namedtuple("DisplayStatus", ["label", "pill"])
 
 
 class Team(models.Model):
@@ -165,6 +171,28 @@ class GameWeek(models.Model):
         if any(q.correct_answer is None for q in questions):
             return False
         return True
+
+    @cached_property
+    def display_status(self):
+        """Player-facing (label, pill) reflecting real progress, not just the
+        stored status. `status` flips to FINALISED the moment the organiser hits
+        'Save & finalise' — which they may do mid-week for a partial rescore — so
+        the raw label lies. Here a week past its deadline reads 'In play' until
+        every result is marked, only then 'Finalised'.
+        """
+        S = self.Status
+        if self.status == S.DRAFT:
+            return DisplayStatus("Draft", "draft")
+        if not self.is_past_deadline:
+            if self.status == S.LOCKED:
+                return DisplayStatus("Locked", "locked")
+            return DisplayStatus("Open", "open")
+        # Past the deadline — show marking progress, not the organiser's action.
+        if self.results_complete:
+            if self.status == S.FINALISED:
+                return DisplayStatus("Finalised", "finalised")
+            return DisplayStatus("Results in", "results_in")
+        return DisplayStatus("In play", "live")
 
 
 class Fixture(models.Model):

@@ -69,7 +69,11 @@ def dashboard(request):
         .order_by("-week_number")
         .first()
     )
-    weeks = list(GameWeek.objects.filter(season=season).order_by("week_number"))
+    weeks = list(
+        GameWeek.objects.filter(season=season)
+        .prefetch_related("fixtures", "questions")  # display_status reads these
+        .order_by("week_number")
+    )
     my_entries = {e.game_week_id: e for e in Entry.objects.filter(participant=participant)}
     for w in weeks:
         w.my_entry = my_entries.get(w.id)
