@@ -3,6 +3,21 @@
 {% block content %}
 <p style="font-size:1.25rem;margin:.4rem 0 1rem;"><span class="muted">Team:</span> <b>{{ participant.display_name }}</b></p>
 
+{% if results_week %}
+<div class="hero" style="border:2px solid var(--primary);">
+  <div class="hero-head">
+    <div>
+      <p class="muted" style="margin:0 0 .2rem;text-transform:uppercase;letter-spacing:.05em;font-size:.8rem;">Latest results</p>
+      <h2 style="margin:0;">Game Week {{ results_week.week_number }}{% if results_week.title %} — {{ results_week.title }}{% endif %}</h2>
+    </div>
+    <span class="pill pill-{{ results_week.status }}">{{ results_week.get_status_display }}</span>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="{% url 'weekly_leaderboard' results_week.week_number %}">See the weekly table →</a>
+  </div>
+</div>
+{% endif %}
+
 {% if open_week %}
 <div class="hero">
   <div class="hero-head">

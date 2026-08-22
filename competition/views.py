@@ -60,6 +60,15 @@ def dashboard(request):
         .order_by("week_number")
         .first()
     )
+    # The most recently played week — the one with a weekly table worth surfacing.
+    results_week = (
+        GameWeek.objects.filter(
+            season=season,
+            status__in=[GameWeek.Status.RESULTS_IN, GameWeek.Status.FINALISED],
+        )
+        .order_by("-week_number")
+        .first()
+    )
     weeks = list(GameWeek.objects.filter(season=season).order_by("week_number"))
     my_entries = {e.game_week_id: e for e in Entry.objects.filter(participant=participant)}
     for w in weeks:
@@ -72,6 +81,7 @@ def dashboard(request):
             "participant": participant,
             "season": season,
             "open_week": open_week,
+            "results_week": results_week,
             "weeks": weeks,
             "season_top": services.season_leaderboard(season.id)[:10],
         },
