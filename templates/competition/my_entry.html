@@ -46,7 +46,10 @@
     <tbody>
       {% for r in breakdown.s1_rows %}
         <tr>
-          <td>{{ r.fixture.home_team }} v {{ r.fixture.away_team }}</td>
+          <td>
+            <span class="team-full">{{ r.fixture.home_team }} v {{ r.fixture.away_team }}</span>
+            <span class="team-short">{{ r.home_short }} v {{ r.away_short }}</span>
+          </td>
           <td class="num">{{ r.pred_home|default_if_none:"–" }}–{{ r.pred_away|default_if_none:"–" }}</td>
           <td class="num">{% if r.has_result %}{{ r.fixture.actual_home_score }}–{{ r.fixture.actual_away_score }}{% else %}–{% endif %}</td>
           <td class="num"><b>{{ r.points }}</b></td>

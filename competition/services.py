@@ -77,7 +77,13 @@ def entry_breakdown(entry: Entry, game_week: GameWeek) -> dict:
     questions = list(game_week.questions.all())
     goals_by_player_id, goals_by_name = _goals_for_week(game_week)
 
-    # Section 1 — per fixture.
+    # Section 1 — per fixture. Short team names let the mobile view swap to a
+    # narrower label so the "You" column doesn't wrap (see my_entry.html).
+    from .entry_doc import _team_shortener
+
+    short = _team_shortener(
+        [f.home_team for f in fixtures] + [f.away_team for f in fixtures]
+    )
     preds = {mp.fixture_id: mp for mp in entry.match_predictions.all()}
     s1_rows, s1 = [], 0
     for f in fixtures:
@@ -89,6 +95,8 @@ def entry_breakdown(entry: Entry, game_week: GameWeek) -> dict:
         s1_rows.append(
             {
                 "fixture": f,
+                "home_short": short(f.home_team),
+                "away_short": short(f.away_team),
                 "pred_home": ph,
                 "pred_away": pa,
                 "has_result": f.has_result,

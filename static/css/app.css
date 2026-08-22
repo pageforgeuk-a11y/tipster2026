@@ -375,3 +375,11 @@ tr.me .rank { color: var(--primary); }
   .container { padding: 2rem 2.5rem 0; }
   h1 { font-size: 2.1rem; }
 }
+
+/* Match-results labels: full names on wider screens, short forms on narrow
+   phones so the neighbouring "You" column doesn't wrap. */
+.team-short { display: none; }
+@media (max-width: 559px) {
+  .team-full { display: none; }
+  .team-short { display: inline; }
+}
