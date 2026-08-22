@@ -283,7 +283,7 @@ table.lb thead th {
   text-transform: uppercase; letter-spacing: .05em; border-bottom: 2px solid var(--border);
 }
 table.lb tbody tr:nth-child(even) { background: var(--surface-low); }
-table.lb td.num, table.lb th.num { text-align: right; }
+table.lb td.num, table.lb th.num { text-align: right; white-space: nowrap; }
 table.lb tbody td b { font-family: var(--font-head); }
 tr.me { background: var(--primary-tint) !important; box-shadow: inset 3px 0 0 var(--primary); }
 .rank {
