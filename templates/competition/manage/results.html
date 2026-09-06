@@ -21,9 +21,9 @@
     </div>
   {% endif %}
 
-  <h2>Fixtures &amp; goalscorers</h2>
-  {% for fixture in fixtures %}
-    <div class="card">
+  <h2>Match results</h2>
+  <div class="card">
+    {% for fixture in fixtures %}
       <div class="fixture">
         <span class="team home">{{ fixture.home_team }}</span>
         <span class="score-pair">
@@ -33,31 +33,35 @@
         </span>
         <span class="team away">{{ fixture.away_team }}</span>
       </div>
-      <div class="muted" style="font-size:.8rem;margin:.5rem 0 .3rem;">Goalscorers</div>
-      {% for row in fixture.goal_rows %}
+    {% endfor %}
+  </div>
+
+  <h2>Goalscorers picked this week</h2>
+  <div class="card">
+    {% if scorer_rows %}
+      <p class="muted" style="margin:0 0 .6rem;font-size:.85rem;">
+        Every player picked by someone this week. Enter how many goals each scored (leave 0 if they didn’t). Only these picks affect scoring.
+      </p>
+      {% for row in scorer_rows %}
         <div class="scorer-line">
-          <input type="text" name="scorer_name_{{ fixture.id }}" value="{{ row.goal.player_name }}" list="{{ player_datalist_id }}" autocomplete="off" placeholder="Scorer" class="scorer-input">
-          <select name="scorer_team_{{ fixture.id }}" class="minput">
-            <option value="">— team —</option>
-            {% for t in fixture.team_options %}<option value="{{ t }}" {% if row.selected_team == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
-          </select>
-          <input type="number" name="scorer_goals_{{ fixture.id }}" value="{{ row.goal.goals }}" min="1" max="20" class="score-input">
-          <label class="pen"><input type="checkbox" name="scorer_pen_{{ fixture.id }}" value="{{ forloop.counter0 }}" {% if row.goal.is_penalty %}checked{% endif %}> pen</label>
+          <input type="hidden" name="wg_player" value="{{ row.player_id }}">
+          <input type="hidden" name="wg_name" value="{{ row.name }}">
+          <label style="flex:1;min-width:0;">
+            {{ row.label }}
+            <span class="muted" style="font-size:.8rem;">· picked by {{ row.pick_count }}{% if row.needs_review %} · <span class="pill pill-locked">needs review</span>{% endif %}</span>
+          </label>
+          <input type="number" name="wg_goals" value="{{ row.goals }}" min="0" max="20" class="score-input" aria-label="Goals for {{ row.label }}">
         </div>
       {% endfor %}
-      {% for i in "012" %}
-        <div class="scorer-line">
-          <input type="text" name="scorer_name_{{ fixture.id }}" value="" list="{{ player_datalist_id }}" autocomplete="off" placeholder="Add scorer…" class="scorer-input">
-          <select name="scorer_team_{{ fixture.id }}" class="minput">
-            <option value="">— team —</option>
-            {% for t in fixture.team_options %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
-          </select>
-          <input type="number" name="scorer_goals_{{ fixture.id }}" value="1" min="1" max="20" class="score-input">
-          <label class="pen"><input type="checkbox" name="scorer_pen_{{ fixture.id }}" value="{{ fixture.goal_rows|length|add:forloop.counter0 }}"> pen</label>
-        </div>
-      {% endfor %}
-    </div>
-  {% endfor %}
+      {% if unresolved_count %}
+        <p class="muted" style="margin:.6rem 0 0;font-size:.8rem;">
+          Picks marked “needs review” aren’t linked to a known player yet — you can still enter goals here, or <a href="{% url 'manage:reconcile' game_week.id %}">reconcile them</a> to tidy identities.
+        </p>
+      {% endif %}
+    {% else %}
+      <p class="muted" style="margin:0;">No scorer picks submitted yet. Once players submit their entries, their picks appear here to mark.</p>
+    {% endif %}
+  </div>
 
   <h2>True / False answers</h2>
   <div class="card">
@@ -72,10 +76,6 @@
       </div>
     {% endfor %}
   </div>
-
-  <datalist id="{{ player_datalist_id }}">
-    {% for label in player_suggestions %}<option value="{{ label }}"></option>{% endfor %}
-  </datalist>
 
   <div class="btn-row">
     <button class="btn btn-secondary" type="submit" name="action" value="save">Save results</button>

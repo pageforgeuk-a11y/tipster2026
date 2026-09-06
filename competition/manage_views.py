@@ -305,7 +305,6 @@ def results(request, gw_id):
         messages.success(request, "Results saved (not yet finalised).")
         return redirect("manage:results", gw_id=gw_id)
 
-    results_ops.fixture_goal_rows(game_week, fixtures)
     provider = get_results_provider()
     return render(
         request,
@@ -316,8 +315,7 @@ def results(request, gw_id):
             "questions": questions,
             "provider_name": provider.name,
             "provider_configured": provider.is_configured(),
-            "player_suggestions": results_ops.player_labels(game_week),
-            "player_datalist_id": "player-suggestions",
+            "scorer_rows": results_ops.picked_scorer_rows(game_week),
             "unresolved_count": results_ops.unresolved_picks(game_week).count(),
         },
     )

@@ -8,6 +8,7 @@ one implementation. These functions are UI-agnostic: they take a POST QueryDict
 from __future__ import annotations
 
 from . import players as player_resolution
+from . import scoring
 from .models import FixtureGoal, GameWeek, Player, ScorerPick
 from .providers import get_results_provider
 
@@ -41,28 +42,94 @@ def reresolve_picks(game_week: GameWeek) -> None:
             pick.save(update_fields=["player", "needs_review"])
 
 
-def fixture_goal_rows(game_week: GameWeek, fixtures):
-    """Annotate each fixture with team options and existing goalscorer rows."""
-    for fixture in fixtures:
-        fixture.team_options = [fixture.home_team, fixture.away_team]
-        rows = []
-        for g in fixture.goals.all():
-            selected = ""
-            if g.player:
-                label = (
-                    g.player.national_team
-                    if game_week.is_international
-                    else g.player.club
-                )
-                if label in fixture.team_options:
-                    selected = label
-            rows.append({"goal": g, "selected_team": selected})
-        fixture.goal_rows = rows
-    return fixtures
+def picked_scorer_rows(game_week: GameWeek):
+    """The distinct scorers picked across the week, each with its goal tally.
+
+    This is what the organiser marks on the results screen: one row per player
+    that appears in any submitted entry's scorer picks, pre-filled with any goals
+    already recorded for the week. Rows are grouped by resolved Player where
+    known, otherwise by normalised name, so the same person shows only once.
+    """
+    goals_by_pid: dict[int, int] = {}
+    goals_by_norm: dict[str, int] = {}
+    for g in FixtureGoal.objects.filter(game_week=game_week):
+        if g.player_id:
+            goals_by_pid[g.player_id] = goals_by_pid.get(g.player_id, 0) + g.goals
+        else:
+            key = scoring.normalize_name(g.player_name)
+            goals_by_norm[key] = goals_by_norm.get(key, 0) + g.goals
+
+    picks = ScorerPick.objects.filter(
+        entry__game_week=game_week,
+        entry__submitted_at__isnull=False,
+    ).select_related("player")
+
+    groups: dict[tuple, dict] = {}
+    for pick in picks:
+        if pick.player_id:
+            key = ("p", pick.player_id)
+            label = pick.player.label(international=game_week.is_international)
+            player_id, name = pick.player_id, pick.player.full_name
+        else:
+            name = (pick.player_name or "").strip()
+            if not name:
+                continue
+            key = ("n", scoring.normalize_name(name))
+            label, player_id = name, ""
+        row = groups.get(key)
+        if row is None:
+            row = groups[key] = {
+                "player_id": player_id,
+                "name": name,
+                "label": label,
+                "pick_count": 0,
+                "needs_review": False,
+                "goals": 0,
+            }
+        row["pick_count"] += 1
+        row["needs_review"] = row["needs_review"] or pick.needs_review
+
+    for (kind, kid), row in groups.items():
+        row["goals"] = (goals_by_pid if kind == "p" else goals_by_norm).get(kid, 0)
+
+    return sorted(groups.values(), key=lambda r: r["label"].lower())
+
+
+def save_week_goals(post, game_week: GameWeek) -> None:
+    """Replace the week's goal tallies from the picked-scorers list.
+
+    The list carries a hidden player id and name per row (see
+    picked_scorer_rows); a row is stored only when its goal count is 1+.
+    """
+    player_ids = post.getlist("wg_player")
+    names = post.getlist("wg_name")
+    counts = post.getlist("wg_goals")
+
+    FixtureGoal.objects.filter(game_week=game_week).delete()
+    to_create = []
+    for idx, raw in enumerate(counts):
+        raw = raw.strip()
+        goals = int(raw) if raw.isdigit() else 0
+        if goals < 1:
+            continue
+        pid = player_ids[idx].strip() if idx < len(player_ids) else ""
+        name = names[idx].strip() if idx < len(names) else ""
+        player = Player.objects.filter(pk=pid).first() if pid.isdigit() else None
+        to_create.append(
+            FixtureGoal(
+                game_week=game_week,
+                fixture=None,
+                player=player,
+                player_name=name or (player.full_name if player else ""),
+                goals=goals,
+            )
+        )
+    if to_create:
+        FixtureGoal.objects.bulk_create(to_create)
 
 
 def save_results(post, game_week: GameWeek, fixtures, questions) -> None:
-    """Persist scores, goalscorers (resolved to Players) and T/F answers."""
+    """Persist match scores, week goal tallies and T/F answers."""
     for fixture in fixtures:
         home = post.get(f"fixture_{fixture.id}_home", "").strip()
         away = post.get(f"fixture_{fixture.id}_away", "").strip()
@@ -70,29 +137,7 @@ def save_results(post, game_week: GameWeek, fixtures, questions) -> None:
         fixture.actual_away_score = int(away) if away.isdigit() else None
         fixture.save(update_fields=["actual_home_score", "actual_away_score"])
 
-        fixture.goals.all().delete()
-        names = post.getlist(f"scorer_name_{fixture.id}")
-        counts = post.getlist(f"scorer_goals_{fixture.id}")
-        teams = post.getlist(f"scorer_team_{fixture.id}")
-        pens = set(post.getlist(f"scorer_pen_{fixture.id}"))
-        for idx, name in enumerate(names):
-            name = name.strip()
-            if not name:
-                continue
-            count = counts[idx] if idx < len(counts) else "1"
-            team_hint = teams[idx].strip() if idx < len(teams) else ""
-            player = player_resolution.resolve_or_create(
-                name,
-                club=None if game_week.is_international else team_hint,
-                national_team=team_hint if game_week.is_international else None,
-            )
-            FixtureGoal.objects.create(
-                fixture=fixture,
-                player=player,
-                player_name=name,
-                goals=int(count) if count.isdigit() and int(count) > 0 else 1,
-                is_penalty=str(idx) in pens,
-            )
+    save_week_goals(post, game_week)
 
     for question in questions:
         val = post.get(f"tf_{question.id}", "")

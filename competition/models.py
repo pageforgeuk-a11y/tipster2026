@@ -257,9 +257,25 @@ class QuestionTemplate(models.Model):
 
 
 class FixtureGoal(models.Model):
-    """A goalscorer record for a fixture, used by Section 4 scoring."""
+    """A goalscorer tally used by Section 4 scoring.
 
-    fixture = models.ForeignKey(Fixture, on_delete=models.CASCADE, related_name="goals")
+    Scoring only cares how many goals a player scored *across the week*, not in
+    which match, so the record is anchored on `game_week`. `fixture` is optional:
+    it's set when the source knows the exact match (the results feed / autofill),
+    and left null for manual organiser entry, which records one week total per
+    player that was picked (see results_ops.picked_scorer_rows / save_results).
+    """
+
+    game_week = models.ForeignKey(
+        GameWeek, on_delete=models.CASCADE, related_name="week_goals"
+    )
+    fixture = models.ForeignKey(
+        Fixture,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="goals",
+    )
     # Canonical identity (preferred for scoring); player_name kept as the raw
     # entered/fed text and a fallback when player is unresolved.
     player = models.ForeignKey(
@@ -271,10 +287,17 @@ class FixtureGoal(models.Model):
     minute = models.PositiveSmallIntegerField(null=True, blank=True)
 
     class Meta:
-        ordering = ["fixture", "player_name"]
+        ordering = ["game_week", "player_name"]
+
+    def save(self, *args, **kwargs):
+        # A goal always belongs to a week; when a fixture is given (feed/autofill)
+        # derive the week from it so callers needn't pass both.
+        if self.game_week_id is None and self.fixture_id is not None:
+            self.game_week_id = self.fixture.game_week_id
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.player_name} ({self.goals}) — {self.fixture}"
+        return f"{self.player_name} ({self.goals}) — GW{self.game_week.week_number}"
 
 
 class Entry(models.Model):

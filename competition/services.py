@@ -171,7 +171,7 @@ def _goals_for_week(game_week: GameWeek):
     """Aggregate goalscorer counts across the week, keyed by Player id and by name."""
     goals_by_name: dict[str, int] = {}
     goals_by_player_id: dict[int, int] = {}
-    for goal in FixtureGoal.objects.filter(fixture__game_week=game_week):
+    for goal in FixtureGoal.objects.filter(game_week=game_week):
         goals_by_name[goal.player_name] = goals_by_name.get(goal.player_name, 0) + goal.goals
         if goal.player_id:
             goals_by_player_id[goal.player_id] = (
