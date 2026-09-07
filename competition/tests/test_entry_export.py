@@ -122,6 +122,7 @@ class EntryExportTests(TestCase):
         # From shows the player's name, address stays on the verified domain.
         self.assertEqual(msg.from_email, "John Smith <tipsters@mail.pageforge.co.uk>")
         self.assertEqual(msg.reply_to, ["me@example.com"])  # reply goes to the player
+        self.assertEqual(msg.cc, ["me@example.com"])  # entrant gets a copy
         self.assertEqual(msg.attachments[0][0], "Tipsters WK1 - Red Lion Rovers.docx")
 
     def test_docx_contains_predictions(self):

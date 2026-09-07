@@ -339,6 +339,7 @@ def email_entry(request, week_number):
         ],
         from_email=from_email,
         reply_to=request.user.email or None,
+        cc=request.user.email or None,
     )
     if ok:
         messages.success(request, "Your entry was emailed to the organiser.")
