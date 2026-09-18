@@ -12,7 +12,10 @@
 </p>
 
 {% if not editable %}
-  <div class="card"><p>This entry is locked. <a href="{% url 'my_entry' game_week.week_number %}">View your entry</a>.</p></div>
+  <div class="card"><p>
+    {% if emailed_lock %}You’ve emailed this entry to the organiser, so it’s locked for the week and can’t be changed.{% else %}This entry is locked.{% endif %}
+    <a href="{% url 'my_entry' game_week.week_number %}">View your entry</a>.
+  </p></div>
 {% else %}
 <form method="post" id="entry-form">
   {% csrf_token %}
@@ -156,11 +159,18 @@
   {% if entry_complete %}
     <div class="btn-row">
       <a class="btn" href="{% url 'download_entry' game_week.week_number %}">Download my entry</a>
-      <form method="post" action="{% url 'email_entry' game_week.week_number %}" style="margin:0;display:inline;">
-        {% csrf_token %}
-        <button class="btn btn-secondary" type="submit">Email my entry to the organiser</button>
-      </form>
+      {% if emailed_lock %}
+        <span class="pill pill-locked" style="align-self:center;">✓ Emailed to the organiser</span>
+      {% else %}
+        <form method="post" action="{% url 'email_entry' game_week.week_number %}" style="margin:0;display:inline;">
+          {% csrf_token %}
+          <button class="btn btn-secondary" type="submit">Email my entry to the organiser</button>
+        </form>
+      {% endif %}
     </div>
+    {% if emailed_lock %}
+      <p class="muted" style="margin-top:.6rem;">Emailing locked your entry for the week. You can still download your copy above.</p>
+    {% endif %}
   {% else %}
     <div class="btn-row">
       <button class="btn" type="button" disabled>Download my entry</button>

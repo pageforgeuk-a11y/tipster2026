@@ -125,6 +125,42 @@ class EntryExportTests(TestCase):
         self.assertEqual(msg.cc, ["me@example.com"])  # entrant gets a copy
         self.assertEqual(msg.attachments[0][0], "Tipsters WK1 - Red Lion Rovers.docx")
 
+    @override_settings(
+        EMAIL_PROVIDER="console",
+        ORGANISER_EMAIL="neil@example.org",
+        DEFAULT_FROM_EMAIL="Tipsters <tipsters@mail.pageforge.co.uk>",
+    )
+    def test_emailing_locks_entry_for_the_week(self):
+        entry = self._fill_entry()
+        self.assertFalse(entry.is_locked)
+
+        self.client.post(
+            reverse("email_entry", args=[self.gw.week_number]), SERVER_NAME="localhost"
+        )
+        entry.refresh_from_db()
+        self.assertTrue(entry.is_locked)
+
+        # The entry screen is now read-only, even though the deadline is days away.
+        resp = self.client.get(
+            reverse("entry", args=[self.gw.week_number]), SERVER_NAME="localhost"
+        )
+        self.assertContains(resp, "locked for the week")
+        self.assertNotContains(resp, 'id="entry-form"')
+
+        # A save attempt is rejected server-side and leaves predictions untouched.
+        before = MatchPrediction.objects.get(
+            entry=entry, fixture=self.fixtures[0]
+        ).pred_home
+        self.client.post(
+            reverse("entry", args=[self.gw.week_number]),
+            {f"fixture_{self.fixtures[0].id}_home": before + 1 if before is not None else 3},
+            SERVER_NAME="localhost",
+        )
+        after = MatchPrediction.objects.get(
+            entry=entry, fixture=self.fixtures[0]
+        ).pred_home
+        self.assertEqual(after, before)
+
     def test_docx_contains_predictions(self):
         self._fill_entry()
         # Realistic values to exercise team-name shortening + scorer formatting.

@@ -90,3 +90,47 @@ class ManageActionTests(TestCase):
 
         resp = self.client.get(reverse("manage:dashboard"), SERVER_NAME="localhost")
         self.assertContains(resp, reverse("manage:reconcile", args=[self.gw.id]))
+
+    def test_organiser_can_unlock_a_locked_entry(self):
+        from competition.models import Entry, Participant
+
+        user = User.objects.create_user("q@x.com", "q@x.com", "pw")
+        part = Participant.objects.create(
+            user=user, season=self.season, display_name="Team Q", join_week=1
+        )
+        entry = Entry.objects.create(
+            participant=part, game_week=self.gw,
+            submitted_at=timezone.now(), is_locked=True,
+        )
+
+        # The dashboard flags the locked entry and links to the entries page.
+        dash = self.client.get(reverse("manage:dashboard"), SERVER_NAME="localhost")
+        self.assertContains(dash, reverse("manage:week_entries", args=[self.gw.id]))
+        self.assertContains(dash, "1 locked")
+
+        resp = self.client.post(
+            reverse("manage:week_entries", args=[self.gw.id]),
+            {"action": "unlock", "entry_id": entry.id},
+            SERVER_NAME="localhost",
+        )
+        self.assertRedirects(resp, reverse("manage:week_entries", args=[self.gw.id]))
+        entry.refresh_from_db()
+        self.assertFalse(entry.is_locked)
+
+    def test_organiser_can_lock_an_entry(self):
+        from competition.models import Entry, Participant
+
+        user = User.objects.create_user("r@x.com", "r@x.com", "pw")
+        part = Participant.objects.create(
+            user=user, season=self.season, display_name="Team R", join_week=1
+        )
+        entry = Entry.objects.create(
+            participant=part, game_week=self.gw, submitted_at=timezone.now()
+        )
+        self.client.post(
+            reverse("manage:week_entries", args=[self.gw.id]),
+            {"action": "lock", "entry_id": entry.id},
+            SERVER_NAME="localhost",
+        )
+        entry.refresh_from_db()
+        self.assertTrue(entry.is_locked)

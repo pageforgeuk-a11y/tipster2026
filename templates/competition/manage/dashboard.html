@@ -62,6 +62,10 @@
         <a class="btn btn-secondary" href="{% url 'manage:reconcile' w.id %}">Reconcile ({{ w.unresolved_count }})</a>
       {% endif %}
 
+      {% if w.submitted_count %}
+        <a class="btn btn-secondary" href="{% url 'manage:week_entries' w.id %}">Entries{% if w.locked_count %} ({{ w.locked_count }} locked){% endif %}</a>
+      {% endif %}
+
       {% if w.status == 'finalised' %}
         <a class="btn btn-secondary" href="{% url 'weekly_leaderboard' w.week_number %}">Table</a>
       {% endif %}

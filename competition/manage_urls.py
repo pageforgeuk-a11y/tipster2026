@@ -12,6 +12,7 @@ urlpatterns = [
     path("week/<int:gw_id>/setup/", manage_views.week_setup, name="week_setup"),
     path("week/<int:gw_id>/action/", manage_views.week_action, name="week_action"),
     path("week/<int:gw_id>/results/", manage_views.results, name="results"),
+    path("week/<int:gw_id>/entries/", manage_views.week_entries, name="week_entries"),
     path("week/<int:gw_id>/reconcile/", manage_views.reconcile, name="reconcile"),
     # Players
     path("players/", manage_views.players, name="players"),

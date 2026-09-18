@@ -107,12 +107,19 @@ def entry(request, week_number):
 
     entry_obj = Entry.objects.filter(participant=participant, game_week=game_week).first()
 
-    # Read-only once the deadline has passed or the week isn't open.
-    editable = game_week.accepts_entries
+    # Read-only once the deadline has passed, the week isn't open, or the player
+    # has emailed it to the organiser (which locks it for the week).
+    emailed_lock = bool(entry_obj and entry_obj.is_locked)
+    editable = game_week.accepts_entries and not emailed_lock
 
     if request.method == "POST":
         if not editable:
-            messages.error(request, "The deadline has passed — this entry is locked.")
+            msg = (
+                "You've emailed this entry to the organiser, so it's locked for the week."
+                if emailed_lock
+                else "The deadline has passed — this entry is locked."
+            )
+            messages.error(request, msg)
             return redirect("entry", week_number=week_number)
 
         form = EntryForm(request.POST, fixtures=fixtures, questions=questions)
@@ -136,6 +143,7 @@ def entry(request, week_number):
             "game_week": game_week,
             "form": form,
             "editable": editable,
+            "emailed_lock": emailed_lock,
             "entry": entry_obj,
             "participant": participant,
             "player_suggestions": _player_suggestions(game_week),
@@ -308,7 +316,7 @@ def email_entry(request, week_number):
     result = _entry_doc_or_redirect(request, week_number)
     if not isinstance(result, tuple):
         return result
-    participant, game_week, _ = result
+    participant, game_week, entry_obj = result
 
     to_email = settings.ORGANISER_EMAIL
     if not to_email:
@@ -342,7 +350,15 @@ def email_entry(request, week_number):
         cc=request.user.email or None,
     )
     if ok:
-        messages.success(request, "Your entry was emailed to the organiser.")
+        # Emailing the organiser is the player's final act for the week — lock the
+        # entry so it can't be changed after the version the organiser now holds.
+        if entry_obj is not None and not entry_obj.is_locked:
+            entry_obj.is_locked = True
+            entry_obj.save(update_fields=["is_locked"])
+        messages.success(
+            request,
+            "Your entry was emailed to the organiser and is now locked for the week.",
+        )
     else:
         messages.error(request, "Sorry — sending the email failed. Please try again.")
     return redirect("entry", week_number=week_number)

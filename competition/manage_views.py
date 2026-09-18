@@ -90,11 +90,17 @@ def dashboard(request):
             .values_list("entry__game_week")
             .annotate(c=Count("id"))
         )
+        locked = dict(
+            Entry.objects.filter(game_week__season=season, is_locked=True)
+            .values_list("game_week")
+            .annotate(c=Count("id"))
+        )
         for w in weeks:
             fixtures = list(w.fixtures.all())
             questions = list(w.questions.all())
             w.submitted_count = submitted.get(w.id, 0)
             w.unresolved_count = unresolved.get(w.id, 0)
+            w.locked_count = locked.get(w.id, 0)
             w.fixture_count = len(fixtures)
             w.question_count = len(questions)
             # Nudge: deadline gone but not finalised yet.
@@ -318,6 +324,51 @@ def results(request, gw_id):
             "scorer_rows": results_ops.picked_scorer_rows(game_week),
             "unresolved_count": results_ops.unresolved_picks(game_week).count(),
         },
+    )
+
+
+@organiser_required
+def week_entries(request, gw_id):
+    """List a week's entries and let the organiser lock / unlock each one.
+
+    A player's entry locks automatically when they email it to the organiser;
+    this is where the organiser reverses that (e.g. a player spotted a mistake)
+    or locks one manually.
+    """
+    game_week = get_object_or_404(GameWeek, pk=gw_id)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        entry = Entry.objects.filter(
+            pk=request.POST.get("entry_id"), game_week=game_week
+        ).select_related("participant").first()
+        if entry is None:
+            messages.error(request, "That entry no longer exists.")
+        elif action == "unlock":
+            entry.is_locked = False
+            entry.save(update_fields=["is_locked"])
+            messages.success(
+                request,
+                f"Unlocked {entry.participant.display_name}’s entry — they can "
+                "edit it again until the deadline.",
+            )
+        elif action == "lock":
+            entry.is_locked = True
+            entry.save(update_fields=["is_locked"])
+            messages.success(
+                request, f"Locked {entry.participant.display_name}’s entry."
+            )
+        return redirect("manage:week_entries", gw_id=gw_id)
+
+    entries = list(
+        Entry.objects.filter(game_week=game_week)
+        .select_related("participant")
+        .order_by("participant__display_name")
+    )
+    return render(
+        request,
+        "competition/manage/week_entries.html",
+        {"game_week": game_week, "entries": entries},
     )
 
 

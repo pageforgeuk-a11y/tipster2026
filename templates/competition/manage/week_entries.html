@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Entries — GW{{ game_week.week_number }}{% endblock %}
+{% block content %}
+{% include "competition/manage/_nav.html" %}
+<h1>Entries — GW{{ game_week.week_number }}</h1>
+<p class="muted">
+  Deadline {{ game_week.deadline|date:"D j M, H:i" }} ·
+  <span class="pill pill-{{ game_week.display_status.pill }}">{{ game_week.display_status.label }}</span>
+</p>
+<p class="muted" style="font-size:.9rem;">
+  An entry locks automatically when the player emails it to the organiser. Unlock one to let them edit it again (only works before the deadline).
+</p>
+
+<div class="card">
+  {% if entries %}
+    <table class="lb">
+      <thead>
+        <tr><th>Team</th><th>Status</th><th class="num"></th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          <tr>
+            <td>{{ e.participant.display_name }}</td>
+            <td>
+              {% if e.is_locked %}
+                <span class="pill pill-locked">Locked</span>
+              {% else %}
+                <span class="pill pill-open">Editable</span>
+              {% endif %}
+            </td>
+            <td class="num">
+              <form method="post" style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="entry_id" value="{{ e.id }}">
+                {% if e.is_locked %}
+                  <button class="btn btn-secondary" type="submit" name="action" value="unlock" style="width:auto;padding:.4rem .9rem;">Unlock</button>
+                {% else %}
+                  <button class="btn btn-secondary" type="submit" name="action" value="lock" style="width:auto;padding:.4rem .9rem;">Lock</button>
+                {% endif %}
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted" style="margin:0;">No entries submitted for this week yet.</p>
+  {% endif %}
+</div>
+
+<a class="btn btn-secondary" href="{% url 'manage:dashboard' %}" style="margin-top:.6rem;">Back to dashboard</a>
+{% endblock %}
