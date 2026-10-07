@@ -48,6 +48,9 @@ def _participant(request):
     )
 
 
+WEEKS_PAGE = 5  # game weeks shown per "page" in the home page list
+
+
 @login_required
 def dashboard(request):
     participant = _participant(request)
@@ -69,11 +72,18 @@ def dashboard(request):
         .order_by("-week_number")
         .first()
     )
+    # Newest first, WEEKS_PAGE at a time; "Show more" bumps ?show= by a page.
+    try:
+        show = max(WEEKS_PAGE, int(request.GET.get("show", WEEKS_PAGE)))
+    except ValueError:
+        show = WEEKS_PAGE
+    week_qs = GameWeek.objects.filter(season=season)
+    total_weeks = week_qs.count()
     weeks = list(
-        GameWeek.objects.filter(season=season)
-        .prefetch_related("fixtures", "questions")  # display_status reads these
-        .order_by("week_number")
+        week_qs.prefetch_related("fixtures", "questions")  # display_status reads these
+        .order_by("-week_number")[:show]
     )
+    remaining_weeks = max(total_weeks - len(weeks), 0)
     my_entries = {e.game_week_id: e for e in Entry.objects.filter(participant=participant)}
     for w in weeks:
         w.my_entry = my_entries.get(w.id)
@@ -87,6 +97,9 @@ def dashboard(request):
             "open_week": open_week,
             "results_week": results_week,
             "weeks": weeks,
+            "remaining_weeks": remaining_weeks,
+            "next_show": show + WEEKS_PAGE,
+            "next_batch": min(WEEKS_PAGE, remaining_weeks),
             "season_top": services.season_leaderboard(season.id)[:10],
         },
     )

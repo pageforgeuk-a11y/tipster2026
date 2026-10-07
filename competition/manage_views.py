@@ -65,15 +65,26 @@ def organiser_required(view):
     return _wrapped
 
 
+WEEKS_PAGE = 5
+
+
 @organiser_required
 def dashboard(request):
     season = Season.objects.filter(is_active=True).first()
     weeks = []
+    total_weeks = 0
+    # Newest week first, WEEKS_PAGE at a time; "Show more" bumps ?show= by a page.
+    try:
+        show = max(WEEKS_PAGE, int(request.GET.get("show", WEEKS_PAGE)))
+    except ValueError:
+        show = WEEKS_PAGE
     if season:
+        week_qs = GameWeek.objects.filter(season=season)
+        total_weeks = week_qs.count()
         weeks = list(
-            GameWeek.objects.filter(season=season)
-            .order_by("week_number")
-            .prefetch_related("fixtures", "questions")
+            week_qs.order_by("-week_number").prefetch_related("fixtures", "questions")[
+                :show
+            ]
         )
         submitted = dict(
             Entry.objects.filter(game_week__season=season, submitted_at__isnull=False)
@@ -114,6 +125,9 @@ def dashboard(request):
         {
             "season": season,
             "weeks": weeks,
+            "remaining_weeks": max(total_weeks - len(weeks), 0),
+            "next_show": show + WEEKS_PAGE,
+            "next_batch": min(WEEKS_PAGE, max(total_weeks - len(weeks), 0)),
             "participant_count": (
                 Participant.objects.filter(season=season).count() if season else 0
             ),
@@ -142,7 +156,7 @@ def week_action(request, gw_id):
         game_week.status = GameWeek.Status.FINALISED
         game_week.save(update_fields=["status"])
         messages.success(
-            request, f"GW{game_week.week_number} finalised and rescored."
+            request, f"GW{game_week.week_number} scored."
         )
     return redirect("manage:dashboard")
 
@@ -301,14 +315,14 @@ def results(request, gw_id):
             game_week.status = GameWeek.Status.FINALISED
             game_week.save(update_fields=["status"])
             messages.success(
-                request, "Results saved, all entries rescored, and the week finalised."
+                request, "Results saved and all entries scored. Run Score / Rescore again whenever more results come in."
             )
             return redirect("manage:dashboard")
 
         if game_week.status in (GameWeek.Status.OPEN, GameWeek.Status.LOCKED):
             game_week.status = GameWeek.Status.RESULTS_IN
             game_week.save(update_fields=["status"])
-        messages.success(request, "Results saved (not yet finalised).")
+        messages.success(request, "Results saved (not yet scored).")
         return redirect("manage:results", gw_id=gw_id)
 
     provider = get_results_provider()
@@ -386,7 +400,7 @@ def reconcile(request, gw_id):
             services.recompute_game_week(game_week)
             game_week.status = GameWeek.Status.FINALISED
             game_week.save(update_fields=["status"])
-            messages.success(request, "Week finalised and rescored.")
+            messages.success(request, "Week scored.")
             return redirect("manage:dashboard")
         return redirect("manage:reconcile", gw_id=gw_id)
 
@@ -489,7 +503,7 @@ def players_merge(request):
         merged = player_resolution.merge_players(primary, dupes)
         messages.success(
             request,
-            f"Merged {merged} player(s) into “{primary}”. Re-finalise affected weeks "
+            f"Merged {merged} player(s) into “{primary}”. Rescore affected weeks "
             "to refresh scores.",
         )
     return redirect("manage:players")

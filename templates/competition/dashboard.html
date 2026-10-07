@@ -40,7 +40,7 @@
 <div class="card"><p class="muted">No game week is open right now. The next one will appear here.</p></div>
 {% endif %}
 
-<h2>All game weeks</h2>
+<h2 id="weeks">All game weeks</h2>
 <div class="card">
   <ul class="week-list">
     {% for w in weeks %}
@@ -66,6 +66,9 @@
     {% endfor %}
   </ul>
 </div>
+{% if remaining_weeks %}
+  <a class="btn btn-secondary" href="?show={{ next_show }}#weeks">Show {{ next_batch }} more ({{ remaining_weeks }} older week{{ remaining_weeks|pluralize }})</a>
+{% endif %}
 
 {% if season_top %}
 <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">

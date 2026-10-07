@@ -74,5 +74,8 @@
 {% empty %}
   <div class="card"><p class="muted">No game weeks yet. <a href="{% url 'manage:week_new' %}">Create the first one →</a></p></div>
 {% endfor %}
+{% if remaining_weeks %}
+  <a class="btn btn-secondary" href="?show={{ next_show }}">Show {{ next_batch }} more ({{ remaining_weeks }} older week{{ remaining_weeks|pluralize }})</a>
+{% endif %}
 {% endif %}
 {% endblock %}
